@@ -4,9 +4,11 @@ import numpy as np
 import scipy as sp
 from numpy import array
 from scipy.integrate import ode
-from scipy.signal.ltisys import abcd_normalize
+# from scipy.signal.ltisys import abcd_normalize
+# currently buggy. Will be fixed in scipy v0.15
+# instead the following can be used temporarily
+from futurescipy import abcd_normalize
 
-from debug import *
 
 class StateSpaceSystem(object):
     """A linear state Space system that can be called in order to solve for

@@ -38,7 +38,17 @@ class testTrivialCases(unittest.TestCase):
                                np.ones((1,5)), np.zeros((1,1)))
         self.assertTrue(stableSys.isStable)
 
+class testLss(unittest.TestCase):
+    """test lss functionalities"""
+    def test_abcd_normalize(self):
+        A, B = np.zeros((5,5)), np.ones((5,1))
+        C, D = np.ones((1,5)), np.zeros((1,1))
+        sys_without_D = lss(A, B, C, None)
+        sys_without_A = lss(None, B, C, D)
 
+        self.assertAlmostEqual(sys_without_A.A, A)
+        self.assertAlmostEqual(sys_without_D.D, D)
+        
 
 
 if __name__ == '__main__':

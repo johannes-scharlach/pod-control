@@ -108,36 +108,142 @@ class StateSpaceSystem(object):
         return StateSpaceSystem(Ar, Br, Cr, self.D)
 
 class lss(object):
-    """linear state space system.
+    """linear time independent state space system.
 
-    Will need a proper numpy-style docstring
+    Default contstructor is called like lss(A,B,C,D) and a system can
+    easily be copied by calling lss(sys) where sys is a
+    lss object itself.
 
+    Parameters
+    ----------
+    A, B, C, D : array_like
+        State-Space matrices. If one of the matrices is None, it is
+        replaced by a zero matrix with appropriate dimensions.
+    reduction : {'balanced_truncation_square_root'}, optional
+        choose method of reduction. If it isn't provided, matrices are 
+        used without reduction.
+
+    Attributes 
+    ----------
+    x0 : array_like, optional
+        Initial state. Defaults to the zero state.
+    t0 : float
+        Initial value for `t`
+    integrator : str
+        Name of the integrator used by ``scipy.integrate.ode``
+    integrator_options : 
+        Options for the specified integrator that can be set.
     """
-    def __init__(self, *args, **kwargs):
-        """Construct a linear state space system
 
-        Default contstructor is called like lss(A,B,C,D) and a system can
-        easily be copied by calling lss(sys) where sys is a
-        lss object itself.
+    x0 = None
+    t0 = 0.0
+    integrator = 'dopri5'
+    integrator_options = {}
+
+    def __init__(self, *args, **kwargs):
+        """Initialize a linear state space system
         """
 
         if len(args) == 4:
-            (A, B, C, D) = abcd_normalize(*args)
+            (self.A, self.B, self.C, self.D) = abcd_normalize(*args)
         elif len(args) == 1:
-            A = args[0].A
-            B = args[0].B
-            C = args[0].C
-            D = args[0].D
+            self.A = args[0].A
+            self.B = args[0].B
+            self.C = args[0].C
+            self.D = args[0].D
         else:
             raise ValueError("Needs 1 or 4 arguments; received %i." % len(args))
 
         if kwargs:
             raise NotImplementedError
 
+        self.state = None
+        self.order = self.A.shape[0]
+        self.inputs = self.B.shape[1]
+        self.outputs = self.C.shape[0]
+        self.control = self._zero_control
 
+    @property
+    def x(self):
+        """State of the system at current time `t`"""
+        return self.state.y
 
+    @property
+    def t(self):
+        """Current time of the system"""
+        return self.state.t
 
+    def f(self, t, y, u):
+        """Rhs of the differential equation"""
+        if callable(u):
+            u = u(t, y)
+        else:
+            u = np.asanyarray(u)
+        return np.dot(self.A, y) + np.dot(self.B, u)
 
+    def _zero_control(self, t, y):
+        return np.zeros((1, self.inputs))
+
+    def setupODE(self):
+        """
+        Set the ode solver. All integrator, options and initial value can 
+        be set through class attributes.
+        """
+        self.state = ode(self.f)
+        self.state.set_integrator(self.integrator,**self.integrator_options)
+        if self.x0 is None:
+            self.x0 = array([0. for _ in range(self.order)])
+        self.state.set_initial_value(self.x0, self.t0)
+        self.state.set_f_params = control
+
+    def __call__(self, times, control=None, force_ode_reset=False):
+        """Get the output at specified times with a provided control
+
+        It is possible to only request the output at one particular time
+        or provide a list of times. If `times` is a sequence, the output
+        will be a list of `nparray`s at these times, otherwise it's just
+        a single `nparray`. However the control can either be specified as a
+        function or is a constant array over all times.
+
+        Parameters
+        ----------
+        times : list or scalar
+            The output for these timese will be calculated
+        control : callable ``control(t, y)`` or array_like, optional
+            If it is specified, it will be overwritten in the attributes.
+        force_ode_reset : Boolean
+            If it's called, the ode solver is reset and the current attributes
+            are used.
+
+        """
+        if force_ode_reset:
+            self.setupODE()
+
+        if control is not None:
+            self.control = control
+            if not self.state:
+                self.setupODE()
+            else:
+                self.state.set_f_params = control
+
+        if not isinstance(times, collections.Sequence):
+            times = [times]
+            return_list = False
+        else:
+            return_list = True
+
+        results = []
+
+        for t in times:
+            self.solve(t)
+            results.append(np.dot(self.C, self.x) +
+                           np.dot(self.D, self.control(t)))
+
+        return results if return_list else results[0]
+
+    def solve(self, t):
+        if not self.state:
+            self.setupODE()
 
 
 

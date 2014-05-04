@@ -1,5 +1,5 @@
 from __future__ import division
-import math
+import collections
 import numpy as np
 import scipy as sp
 from numpy import array
@@ -161,7 +161,7 @@ class lss(object):
         self.order = self.A.shape[0]
         self.inputs = self.B.shape[1]
         self.outputs = self.C.shape[0]
-        self.control = self._zero_control
+        self.control = np.zeros((self.inputs,))
 
     @property
     def x(self):
@@ -181,9 +181,6 @@ class lss(object):
             u = np.asanyarray(u)
         return np.dot(self.A, y) + np.dot(self.B, u)
 
-    def _zero_control(self, t, y):
-        return np.zeros((1, self.inputs))
-
     def setupODE(self):
         """
         Set the ode solver. All integrator, options and initial value can 
@@ -194,7 +191,7 @@ class lss(object):
         if self.x0 is None:
             self.x0 = array([0. for _ in range(self.order)])
         self.state.set_initial_value(self.x0, self.t0)
-        self.state.set_f_params = control
+        self.state.set_f_params = self.control
 
     def __call__(self, times, control=None, force_ode_reset=False):
         """Get the output at specified times with a provided control
@@ -234,16 +231,23 @@ class lss(object):
 
         results = []
 
+        if callable(self.control):
+            u = self.control
+        else:
+            def u(t, y):
+                return self.control
         for t in times:
             self.solve(t)
             results.append(np.dot(self.C, self.x) +
-                           np.dot(self.D, self.control(t)))
+                           np.dot(self.D, u(t, self.x)))
 
         return results if return_list else results[0]
 
     def solve(self, t):
         if not self.state:
             self.setupODE()
+        self.state.integrate(t)
+        return self.x
 
 
 

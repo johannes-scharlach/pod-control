@@ -3,6 +3,8 @@ import numpy as np
 import scipy as sp
 from pod import *
 import unittest
+from numpy.testing import assert_array_equal, assert_array_almost_equal, \
+                          assert_allclose
 
 class testTrivialCases(unittest.TestCase):
     """test trivial cases like all zeros or ones in very small systems"""
@@ -46,8 +48,17 @@ class testLss(unittest.TestCase):
         sys_without_D = lss(A, B, C, None)
         sys_without_A = lss(None, B, C, D)
 
-        self.assertAlmostEqual(sys_without_A.A, A)
-        self.assertAlmostEqual(sys_without_D.D, D)
+        assert_array_equal(sys_without_A.A, A)
+        assert_array_equal(sys_without_D.D, D)
+
+    def test_zero_control(self):
+        A, B = np.zeros((5,5)), np.ones((5,1))
+        C, D = np.ones((1,5)), np.zeros((1,1))
+        sys = lss(A, B, C, D)
+        sys.x0 = np.ones((5,1))
+        sys(2.0)
+
+        assert_array_equal(sys.x, np.ones((5,1)))
         
 
 

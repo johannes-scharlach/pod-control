@@ -27,7 +27,6 @@ class StateSpaceSystem(object):
             x0 = array([0. for _ in range(self.order)])
         self.state.set_initial_value(x0, t0)
 
-    #@InputOfCalls
     def f(self, t, y, u):
         if callable(u):
             u = u(t=t, y=y)
@@ -78,6 +77,7 @@ class StateSpaceSystem(object):
     def truncate(self, k=0, tol=0.0, balance=True, scale=False):
         """Use the square root algorithm and optionally balance the system to
         truncate it
+
         """
         if not self.isStable:
             raise ValueError("This doesn't seem to be a stable system!")
@@ -102,7 +102,8 @@ class StateSpaceSystem(object):
         m = np.size(self.B,1)
         p = np.size(self.C,0)
         nr = k
-        Nr, Ar, Br, Cr, hsv = ab09ad(dico,job,equil,n,m,p,self.A,self.B,self.C,nr,tol)
+        Nr, Ar, Br, Cr, hsv = ab09ad(dico,job,equil,n,m,p,
+                                     self.A,self.B,self.C,nr,tol)
         self.hsv = hsv
    
         return StateSpaceSystem(Ar, Br, Cr, self.D)
@@ -133,6 +134,7 @@ class lss(object):
         Name of the integrator used by ``scipy.integrate.ode``
     integrator_options : 
         Options for the specified integrator that can be set.
+
     """
 
     x0 = None
@@ -142,6 +144,7 @@ class lss(object):
 
     def __init__(self, *args, **kwargs):
         """Initialize a linear state space system
+
         """
 
         if len(args) == 4:
@@ -165,33 +168,39 @@ class lss(object):
 
     @property
     def x(self):
-        """State of the system at current time `t`"""
+        """State of the system at current time `t`
+
+        """
         return self.state.y
 
     @property
     def t(self):
-        """Current time of the system"""
+        """Current time of the system
+
+        """
         return self.state.t
 
     def f(self, t, y, u):
-        """Rhs of the differential equation"""
+        """Rhs of the differential equation
+
+        """
         if callable(u):
             u = u(t, y)
         else:
-            u = np.asanyarray(u)
+            u = np.asarray(u)
         return np.dot(self.A, y) + np.dot(self.B, u)
 
     def setupODE(self):
-        """
-        Set the ode solver. All integrator, options and initial value can 
+        """Set the ode solver. All integrator, options and initial value can 
         be set through class attributes.
+
         """
         self.state = ode(self.f)
         self.state.set_integrator(self.integrator,**self.integrator_options)
         if self.x0 is None:
-            self.x0 = array([0. for _ in range(self.order)])
+            self.x0 = np.zeros((self.order,))
         self.state.set_initial_value(self.x0, self.t0)
-        self.state.set_f_params = self.control
+        self.state.set_f_params(self.control)
 
     def __call__(self, times, control=None, force_ode_reset=False):
         """Get the output at specified times with a provided control
@@ -213,15 +222,14 @@ class lss(object):
             are used.
 
         """
-        if force_ode_reset:
-            self.setupODE()
 
         if control is not None:
             self.control = control
-            if not self.state:
-                self.setupODE()
-            else:
-                self.state.set_f_params = control
+            if self.state and not force_ode_reset:
+                self.state.set_f_params(control)
+
+        if force_ode_reset or not self.state:
+            self.setupODE()
 
         if not isinstance(times, collections.Sequence):
             times = [times]

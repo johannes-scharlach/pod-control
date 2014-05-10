@@ -120,9 +120,11 @@ class lss(object):
     A, B, C, D : array_like
         State-Space matrices. If one of the matrices is None, it is
         replaced by a zero matrix with appropriate dimensions.
-    reduction : {'balanced_truncation_square_root'}, optional
-        choose method of reduction. If it isn't provided, matrices are 
+    reduction : {'truncation_square_root'}, optional
+        Choose method of reduction. If it isn't provided, matrices are 
         used without reduction.
+    **reduction_options : dict, optional
+        The arguments with which the reduction method is called.
 
     Attributes 
     ----------
@@ -142,23 +144,29 @@ class lss(object):
     integrator = 'dopri5'
     integrator_options = {}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *create_from, reduction=None, **reduction_options):
         """Initialize a linear state space system
 
         """
 
-        if len(args) == 4:
-            (self.A, self.B, self.C, self.D) = abcd_normalize(*args)
-        elif len(args) == 1:
-            self.A = args[0].A
-            self.B = args[0].B
-            self.C = args[0].C
-            self.D = args[0].D
+        if len(create_from) == 4:
+            (self.A, self.B, self.C, self.D) = abcd_normalize(*create_from)
+        elif len(create_from) == 1:
+            self.A = create_from[0].A
+            self.B = create_from[0].B
+            self.C = create_from[0].C
+            self.D = create_from[0].D
         else:
-            raise ValueError("Needs 1 or 4 arguments; received %i." % len(args))
+            raise ValueError("Needs 1 or 4 arguments; received %i."
+                             % len(create_from))
 
-        if kwargs:
-            raise NotImplementedError
+        if reduction:
+            reduction_functions = {
+                'truncation_square_root' : truncation_square_root
+                }
+            Nr, self.A, self.B, self.C, self.hsv = \
+                reduction_functions[reduction](**reduction_options)
+
 
         self.state = None
         self.order = self.A.shape[0]
@@ -297,6 +305,12 @@ def truncation_square_root(A, B, C, k=0, tol=0.0, balance=True, scale=True):
 
     Raises
     ------
+    ValueError
+        If the system that's provided is not stable (i.e. `A` has eigenvalues
+        which have non-negative real parts)
+    ControlSlycot
+        If the slycot subroutine `ab09ad` can't be found. Occurs if the
+        slycot package is not installed.
 
     """
     if not isStable(A):

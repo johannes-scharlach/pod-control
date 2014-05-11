@@ -43,8 +43,11 @@ class lss(object):
         Initial value for `t`
     integrator : str
         Name of the integrator used by ``scipy.integrate.ode``
-    integrator_options : 
+    integrator_options : dict
         Options for the specified integrator that can be set.
+    reduction_functions : dict
+        The functions that can be choosen as an input parameter with the
+        `reduction` keyword.
 
     """
 
@@ -52,8 +55,9 @@ class lss(object):
     t0 = 0.0
     integrator = 'dopri5'
     integrator_options = {}
+    reduction_functions = {'truncation_square_root' : truncation_square_root}
 
-    def __init__(self, *create_from, reduction=None, **reduction_options):
+    def __init__(self, *create_from, **reduction_options):
         """Initialize a linear state space system
 
         """
@@ -69,12 +73,9 @@ class lss(object):
             raise ValueError("Needs 1 or 4 arguments; received %i."
                              % len(create_from))
 
-        if reduction:
-            reduction_functions = {
-                'truncation_square_root' : truncation_square_root
-                }
+        if reduction_options:
             Nr, self.A, self.B, self.C, self.hsv = \
-                reduction_functions[reduction](**reduction_options)
+                reduction_functions[reduction_options.pop("reduction")](**reduction_options)
 
 
         self.state = None
@@ -88,7 +89,11 @@ class lss(object):
         """State of the system at current time `t`
 
         """
-        return self.state.y
+        try:
+            x = self.state.y
+        except AttributeError:
+            x = self.x0
+        return x
 
     @property
     def t(self):
@@ -96,6 +101,15 @@ class lss(object):
 
         """
         return self.state.t
+
+    @property
+    def y(self):
+        if callable(self.control):
+            u = self.control
+        else:
+            def u(t, y):
+                return self.control
+        return np.dot(self.C, self.x) + np.dot(self.D, u(t, self.x))
 
     def f(self, t, y, u):
         """Rhs of the differential equation
@@ -124,8 +138,8 @@ class lss(object):
 
         It is possible to only request the output at one particular time
         or provide a list of times. If `times` is a sequence, the output
-        will be a list of `nparray`s at these times, otherwise it's just
-        a single `nparray`. However the control can either be specified as a
+        will be a list of ``nparray``s at these times, otherwise it's just
+        a single ``nparray``. However the control can either be specified as a
         function or is a constant array over all times.
 
         Parameters

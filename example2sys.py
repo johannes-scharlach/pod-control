@@ -1,4 +1,5 @@
 from __future__ import division
+import math
 
 import scipy.io
 import pod
@@ -27,6 +28,34 @@ def heatSystem(N, L=1.0, g0=0., gN=0.):
 
     sys = pod.lss(A, B, C, D)
     sys.control = np.array([g0, gN])
+
+    return sys
+
+def optionPricing(N=None, option="put", r=0.05, T=1., K=100., L=None):
+    if not L:
+        L = 50 * K
+    if not N:
+        N = 1000
+    h = L/N
+
+    if option is "put":
+        def boundary_conditions(t, y=None):
+            a = math.e**(-r*(T-t))*K
+            b = 0.
+            return np.array([a, b])
+        x0 = [max(K-h*i, 0) for i in range(1,N)]
+    elif option is "call":
+        def boundary_conditions(t, y=None):
+            a = 0.
+            b = L - math.e**(-r*(T-t))*K
+            return np.array([a, b])
+        x0 = [max(h*i-K, 0) for i in range(1,N)]
+    else:
+        raise ValueError("No such option aviable")
+
+    sys = heatSystem(N, L=L)
+    sys.control = boundary_conditions
+    sys.x0 = np.array(x0)
 
     return sys
 

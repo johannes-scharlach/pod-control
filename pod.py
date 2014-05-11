@@ -17,6 +17,89 @@ from scipy.integrate import ode
 from futurescipy import abcd_normalize
 
 
+def truncation_square_root(A, B, C,
+                           k=0, tol=0.0,
+                           balance=True, scale=True,
+                           check_stability=True):
+    """Perform truncation of a system. Scaling and balancing are optional
+
+    This allows to reduce a linear state space system by either specifying it
+    to a certain number of states `k` or by specifying a error tolerance `tol`
+    relative to the input. In theory the most accurate results are achieved by
+    using `balance` and `scale` but the size of the error strongly depends on
+    the particular problem and scaling and balancing may in some cases cost
+    too much.
+
+    Parameters
+    ----------
+    A, B, C : array_like
+        State-Space matrices of the system that should be reduced
+    k : int, optional
+        Order of the output system
+    tol : float, optional
+        Error of the output system, based on the Hankel Singular Values
+    balance : Boolean, optional
+        Balance the system before reducing it to make sure, that the error
+        is kept small
+    scale : Boolean, optional
+        Scale the system
+    check_stability : Boolean, optional
+        Checks if all the real parts of the eigenvalues of A are in the left
+        half of the complex plane.
+
+    Returns
+    -------
+    Nr : int
+        Actual size of the system, based on the error: If the Machine error
+        would have been bigger than the error of the reduced system, it may
+        happen that ``Nr < k`` and if the error would be inconsiderably bad,
+        It might be the case that ``Nr > k``. In case `k` was never specified,
+        this is purely based on `tol`
+    Ar, Br, Cr : ndarray
+        Reduced arrays
+    hsv : 
+        Hankel singular values of the original system. The size of the error
+        may be calculated based on this.
+
+    Raises
+    ------
+    ValueError
+        If the system that's provided is not stable (i.e. `A` has eigenvalues
+        which have non-negative real parts)
+    ControlSlycot
+        If the slycot subroutine `ab09ad` can't be found. Occurs if the
+        slycot package is not installed.
+
+    """
+    if check_stability and not isStable(A):
+        raise ValueError("This doesn't seem to be a stable system!")
+    try:
+        from slycot import ab09ad
+    except ImportError:
+        raise ControlSlycot("can't find slycot subroutine ab09ad")
+
+    if balance:
+        job = 'B'
+    else:
+        job = 'N'
+
+    if scale:
+        equil = 'S'
+    else:
+        equil = 'N'
+
+    dico = 'C'
+    n = np.size(A,0)
+    m = np.size(B,1)
+    p = np.size(C,0)
+    nr = k
+    return ab09ad(dico,job,equil,n,m,p,A,B,C,nr,tol)
+
+
+def isStable(A):
+    D, V = np.linalg.eig(A)
+    return (D.real < 0).all()
+
 class lss(object):
     """linear time independent state space system.
 
@@ -64,25 +147,29 @@ class lss(object):
 
         if len(create_from) == 4:
             (self.A, self.B, self.C, self.D) = abcd_normalize(*create_from)
+            self.inputs = self.B.shape[1]
+            self.outputs = self.C.shape[0]
+            self.control = np.zeros((self.inputs,))
         elif len(create_from) == 1:
             self.A = create_from[0].A
             self.B = create_from[0].B
             self.C = create_from[0].C
             self.D = create_from[0].D
+            self.inputs = create_from[0].inputs
+            self.outputs = create_from[0].outputs
+            self.control = create_from[0].control
         else:
             raise ValueError("Needs 1 or 4 arguments; received %i."
                              % len(create_from))
 
         if reduction_options:
             Nr, self.A, self.B, self.C, self.hsv = \
-                reduction_functions[reduction_options.pop("reduction")](**reduction_options)
-
+                self.reduction_functions[reduction_options.pop("reduction")](
+                    self.A, self.B, self.C, **reduction_options
+                    )
 
         self.state = None
         self.order = self.A.shape[0]
-        self.inputs = self.B.shape[1]
-        self.outputs = self.C.shape[0]
-        self.control = np.zeros((self.inputs,))
 
     @property
     def x(self):
@@ -187,86 +274,4 @@ class lss(object):
             self.setupODE()
         self.state.integrate(t)
         return self.x
-
-def truncation_square_root(A, B, C, k=0, tol=0.0, balance=True, scale=True):
-    """Perform truncation of a system. Scaling and balancing are optional
-
-    This allows to reduce a linear state space system by either specifying it
-    to a certain number of states `k` or by specifying a error tolerance `tol`
-    relative to the input. In theory the most accurate results are achieved by
-    using `balance` and `scale` but the size of the error strongly depends on
-    the particular problem and scaling and balancing may in some cases cost
-    too much.
-
-    Parameters
-    ----------
-    A, B, C : array_like
-        State-Space matrices of the system that should be reduced
-    k : int, optional
-        Order of the output system
-    tol : float, optional
-        Error of the output system, based on the Hankel Singular Values
-    balance : Boolean, optional
-        Balance the system before reducing it to make sure, that the error
-        is kept small
-    scale : Boolean, optional
-        Scale the system
-
-    Returns
-    -------
-    Nr : int
-        Actual size of the system, based on the error: If the Machine error
-        would have been bigger than the error of the reduced system, it may
-        happen that ``Nr < k`` and if the error would be inconsiderably bad,
-        It might be the case that ``Nr > k``. In case `k` was never specified,
-        this is purely based on `tol`
-    Ar, Br, Cr : ndarray
-        Reduced arrays
-    hsv : 
-        Hankel singular values of the original system. The size of the error
-        may be calculated based on this.
-
-    Raises
-    ------
-    ValueError
-        If the system that's provided is not stable (i.e. `A` has eigenvalues
-        which have non-negative real parts)
-    ControlSlycot
-        If the slycot subroutine `ab09ad` can't be found. Occurs if the
-        slycot package is not installed.
-
-    """
-    if not isStable(A):
-        raise ValueError("This doesn't seem to be a stable system!")
-    try:
-        from slycot import ab09ad
-    except ImportError:
-        raise ControlSlycot("can't find slycot subroutine ab09ad")
-
-    if balance:
-        job = 'B'
-    else:
-        job = 'N'
-
-    if scale:
-        equil = 'S'
-    else:
-        equil = 'N'
-
-    dico = 'C'
-    n = np.size(A,0)
-    m = np.size(B,1)
-    p = np.size(C,0)
-    nr = k
-    Nr, Ar, Br, Cr, hsv = ab09ad(dico,job,equil,n,m,p,
-                                 self.A,self.B,self.C,nr,tol)
-
-
-def isStable(A):
-    D, V = np.linalg.eig(A)
-    return (D.real < 0).all()
-
-
-
-
 

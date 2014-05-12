@@ -20,7 +20,8 @@ from futurescipy import abcd_normalize
 def truncation_square_root(A, B, C,
                            k=0, tol=0.0,
                            balance=True, scale=True,
-                           check_stability=True):
+                           check_stability=True,
+                           length_cache_array=None):
     """Perform truncation of a system. Scaling and balancing are optional
 
     This allows to reduce a linear state space system by either specifying it
@@ -93,7 +94,11 @@ def truncation_square_root(A, B, C,
     m = np.size(B,1)
     p = np.size(C,0)
     nr = k
-    return ab09ad(dico,job,equil,n,m,p,A,B,C,nr,tol)
+
+    if not length_cache_array:
+        length_cache_array = 5*n**2 + n*m + n*p + 10*n + m*p
+
+    return ab09ad(dico,job,equil,n,m,p,A,B,C,nr,tol,ldwork=length_cache_array)
 
 
 def isStable(A):

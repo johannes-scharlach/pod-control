@@ -33,7 +33,9 @@ def truncation_square_root(A, B, C,
 
     Parameters
     ----------
-    A, B, C : array_like
+    A : array_like
+    B : array_like
+    C : array_like
         State-Space matrices of the system that should be reduced
     k : int, optional
         Order of the output system
@@ -58,7 +60,7 @@ def truncation_square_root(A, B, C,
         this is purely based on `tol`
     Ar, Br, Cr : ndarray
         Reduced arrays
-    hsv : 
+    hsv : ndarray
         Hankel singular values of the original system. The size of the error
         may be calculated based on this.
 
@@ -67,7 +69,7 @@ def truncation_square_root(A, B, C,
     ValueError
         If the system that's provided is not stable (i.e. `A` has eigenvalues
         which have non-negative real parts)
-    ControlSlycot
+    ImportError
         If the slycot subroutine `ab09ad` can't be found. Occurs if the
         slycot package is not installed.
 
@@ -77,7 +79,7 @@ def truncation_square_root(A, B, C,
     try:
         from slycot import ab09ad
     except ImportError:
-        raise ControlSlycot("can't find slycot subroutine ab09ad")
+        raise ImportError("can't find slycot subroutine ab09ad")
 
     if balance:
         job = 'B'
@@ -108,19 +110,22 @@ def isStable(A):
 class lss(object):
     """linear time independent state space system.
 
-    Default contstructor is called like lss(A,B,C,D) and a system can
-    easily be copied by calling lss(sys) where sys is a
+    Default contstructor is called like ``lss(A,B,C,D)`` and a system can
+    easily be copied by calling ``lss(sys)`` where `sys` is a
     lss object itself.
 
     Parameters
     ----------
-    A, B, C, D : array_like
+    A : array_like
+    B : array_like
+    C : array_like
+    D : array_like
         State-Space matrices. If one of the matrices is None, it is
         replaced by a zero matrix with appropriate dimensions.
     reduction : {'truncation_square_root'}, optional
         Choose method of reduction. If it isn't provided, matrices are 
         used without reduction.
-    **reduction_options : dict, optional
+    \*\*reduction_options : dict, optional
         The arguments with which the reduction method is called.
 
     Attributes 
@@ -230,7 +235,7 @@ class lss(object):
 
         It is possible to only request the output at one particular time
         or provide a list of times. If `times` is a sequence, the output
-        will be a list of ``nparray``s at these times, otherwise it's just
+        will be a list of ``nparrays`` at these times, otherwise it's just
         a single ``nparray``. However the control can either be specified as a
         function or is a constant array over all times.
 

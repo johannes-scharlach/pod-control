@@ -26,6 +26,7 @@ class InputOfCalls(object):
 
 	@classmethod
 	def inputs(cls):
-		"""return a dict of {function: [inputs]
+		"""return a dict of {function: [inputs],...}
+		
 		"""
 		return dict([(f.__name__, cls.instances[f].inputcontents) for f in cls.instances])

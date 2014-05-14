@@ -1,0 +1,186 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>futurescipy &mdash; .  documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title=".  documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">.  documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for futurescipy</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Some functions that will be integrated into scipy in a future version. The use</span>
+<span class="sd">of this file should be avoided as soon as the functions are fixed in scipy.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">absolute_import</span>
+
+<span class="c">#</span>
+<span class="c"># Aug 2013: Juan Luis Cano</span>
+<span class="c">#   Rewrote abcd_normalize.</span>
+<span class="c"># May 2014: Johannes Scharlach</span>
+<span class="c">#   Created futurescipy.py from scipy source</span>
+<span class="c">#</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">atleast_2d</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;abcd_normalize&quot;</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">_none_to_empty_2d</span><span class="p">(</span><span class="n">arg</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">arg</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">arg</span>
+
+
+<span class="k">def</span> <span class="nf">_atleast_2d_or_none</span><span class="p">(</span><span class="n">arg</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">arg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">atleast_2d</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_shape_or_none</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">M</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">None</span><span class="p">,)</span> <span class="o">*</span> <span class="mi">2</span>
+
+
+<span class="k">def</span> <span class="nf">_choice_not_none</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">arg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">arg</span>
+
+
+<span class="k">def</span> <span class="nf">_restore</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">shape</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;The input arrays have incompatible shapes.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">M</span>
+
+
+<div class="viewcode-block" id="abcd_normalize"><a class="viewcode-back" href="../futurescipy.html#futurescipy.abcd_normalize">[docs]</a><span class="k">def</span> <span class="nf">abcd_normalize</span><span class="p">(</span><span class="n">A</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">B</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">D</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check state-space matrices and ensure they are rank-2.</span>
+
+<span class="sd">    If enough information on the system is provided, that is, enough</span>
+<span class="sd">    properly-shaped arrays are passed to the function, the missing ones</span>
+<span class="sd">    are built from this information, ensuring the correct number of</span>
+<span class="sd">    rows and columns. Otherwise a ValueError is raised.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    `A, B, C, D` : array_like, optional</span>
+<span class="sd">        State-space matrices. All of them are None (missing) by default.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    A, B, C, D : array</span>
+<span class="sd">        Properly shaped state-space matrices.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If not enough information on the system was provided.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">_atleast_2d_or_none</span><span class="p">,</span> <span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">D</span><span class="p">))</span>
+
+    <span class="n">MA</span><span class="p">,</span> <span class="n">NA</span> <span class="o">=</span> <span class="n">_shape_or_none</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="n">MB</span><span class="p">,</span> <span class="n">NB</span> <span class="o">=</span> <span class="n">_shape_or_none</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
+    <span class="n">MC</span><span class="p">,</span> <span class="n">NC</span> <span class="o">=</span> <span class="n">_shape_or_none</span><span class="p">(</span><span class="n">C</span><span class="p">)</span>
+    <span class="n">MD</span><span class="p">,</span> <span class="n">ND</span> <span class="o">=</span> <span class="n">_shape_or_none</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">_choice_not_none</span><span class="p">(</span><span class="n">MA</span><span class="p">,</span> <span class="n">MB</span><span class="p">,</span> <span class="n">NC</span><span class="p">)</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">_choice_not_none</span><span class="p">(</span><span class="n">NB</span><span class="p">,</span> <span class="n">ND</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">_choice_not_none</span><span class="p">(</span><span class="n">MC</span><span class="p">,</span> <span class="n">MD</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">p</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">q</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">r</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Not enough information on the system.&quot;</span><span class="p">)</span>
+
+    <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">_none_to_empty_2d</span><span class="p">,</span> <span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">D</span><span class="p">))</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">_restore</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span>
+    <span class="n">B</span> <span class="o">=</span> <span class="n">_restore</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">q</span><span class="p">))</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">_restore</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">_restore</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">q</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">D</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">.  documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Johannes Scharlach.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

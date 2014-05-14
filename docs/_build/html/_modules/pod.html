@@ -1,0 +1,378 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pod &mdash; .  documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title=".  documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">.  documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pod</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Model order reduction for linear state space systems can be done with</span>
+<span class="sd">Proper Orthogonal Decomposition (POD) methods. Some of them can be simply</span>
+<span class="sd">applied when creating a system.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+
+<span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="kn">as</span> <span class="nn">sp</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">array</span>
+<span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">ode</span>
+<span class="c"># from scipy.signal.ltisys import abcd_normalize</span>
+<span class="c"># currently buggy. Will be fixed in scipy v0.15</span>
+<span class="c"># instead the following can be used temporarily</span>
+<span class="kn">from</span> <span class="nn">futurescipy</span> <span class="kn">import</span> <span class="n">abcd_normalize</span>
+
+
+<div class="viewcode-block" id="truncation_square_root"><a class="viewcode-back" href="../pod.html#pod.truncation_square_root">[docs]</a><span class="k">def</span> <span class="nf">truncation_square_root</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span>
+                           <span class="n">k</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                           <span class="n">balance</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                           <span class="n">check_stability</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                           <span class="n">length_cache_array</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform truncation of a system. Scaling and balancing are optional</span>
+
+<span class="sd">    This allows to reduce a linear state space system by either specifying it</span>
+<span class="sd">    to a certain number of states `k` or by specifying a error tolerance `tol`</span>
+<span class="sd">    relative to the input. In theory the most accurate results are achieved by</span>
+<span class="sd">    using `balance` and `scale` but the size of the error strongly depends on</span>
+<span class="sd">    the particular problem and scaling and balancing may in some cases cost</span>
+<span class="sd">    too much.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    A : array_like</span>
+<span class="sd">    B : array_like</span>
+<span class="sd">    C : array_like</span>
+<span class="sd">        State-Space matrices of the system that should be reduced</span>
+<span class="sd">    k : int, optional</span>
+<span class="sd">        Order of the output system</span>
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Error of the output system, based on the Hankel Singular Values</span>
+<span class="sd">    balance : Boolean, optional</span>
+<span class="sd">        Balance the system before reducing it to make sure, that the error</span>
+<span class="sd">        is kept small</span>
+<span class="sd">    scale : Boolean, optional</span>
+<span class="sd">        Scale the system</span>
+<span class="sd">    check_stability : Boolean, optional</span>
+<span class="sd">        Checks if all the real parts of the eigenvalues of A are in the left</span>
+<span class="sd">        half of the complex plane.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Nr : int</span>
+<span class="sd">        Actual size of the system, based on the error: If the Machine error</span>
+<span class="sd">        would have been bigger than the error of the reduced system, it may</span>
+<span class="sd">        happen that ``Nr &lt; k`` and if the error would be inconsiderably bad,</span>
+<span class="sd">        It might be the case that ``Nr &gt; k``. In case `k` was never specified,</span>
+<span class="sd">        this is purely based on `tol`</span>
+<span class="sd">    Ar, Br, Cr : ndarray</span>
+<span class="sd">        Reduced arrays</span>
+<span class="sd">    hsv : ndarray</span>
+<span class="sd">        Hankel singular values of the original system. The size of the error</span>
+<span class="sd">        may be calculated based on this.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the system that&#39;s provided is not stable (i.e. `A` has eigenvalues</span>
+<span class="sd">        which have non-negative real parts)</span>
+<span class="sd">    ControlSlycot</span>
+<span class="sd">        If the slycot subroutine `ab09ad` can&#39;t be found. Occurs if the</span>
+<span class="sd">        slycot package is not installed.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">check_stability</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">isStable</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;This doesn&#39;t seem to be a stable system!&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">slycot</span> <span class="kn">import</span> <span class="n">ab09ad</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ControlSlycot</span><span class="p">(</span><span class="s">&quot;can&#39;t find slycot subroutine ab09ad&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">balance</span><span class="p">:</span>
+        <span class="n">job</span> <span class="o">=</span> <span class="s">&#39;B&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">job</span> <span class="o">=</span> <span class="s">&#39;N&#39;</span>
+
+    <span class="k">if</span> <span class="n">scale</span><span class="p">:</span>
+        <span class="n">equil</span> <span class="o">=</span> <span class="s">&#39;S&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">equil</span> <span class="o">=</span> <span class="s">&#39;N&#39;</span>
+
+    <span class="n">dico</span> <span class="o">=</span> <span class="s">&#39;C&#39;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">A</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">B</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">C</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">nr</span> <span class="o">=</span> <span class="n">k</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">length_cache_array</span><span class="p">:</span>
+        <span class="n">length_cache_array</span> <span class="o">=</span> <span class="mi">5</span><span class="o">*</span><span class="n">n</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">n</span><span class="o">*</span><span class="n">m</span> <span class="o">+</span> <span class="n">n</span><span class="o">*</span><span class="n">p</span> <span class="o">+</span> <span class="mi">10</span><span class="o">*</span><span class="n">n</span> <span class="o">+</span> <span class="n">m</span><span class="o">*</span><span class="n">p</span>
+
+    <span class="k">return</span> <span class="n">ab09ad</span><span class="p">(</span><span class="n">dico</span><span class="p">,</span><span class="n">job</span><span class="p">,</span><span class="n">equil</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">m</span><span class="p">,</span><span class="n">p</span><span class="p">,</span><span class="n">A</span><span class="p">,</span><span class="n">B</span><span class="p">,</span><span class="n">C</span><span class="p">,</span><span class="n">nr</span><span class="p">,</span><span class="n">tol</span><span class="p">,</span><span class="n">ldwork</span><span class="o">=</span><span class="n">length_cache_array</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="isStable"><a class="viewcode-back" href="../pod.html#pod.isStable">[docs]</a><span class="k">def</span> <span class="nf">isStable</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+    <span class="n">D</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">D</span><span class="o">.</span><span class="n">real</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="lss"><a class="viewcode-back" href="../pod.html#pod.lss">[docs]</a><span class="k">class</span> <span class="nc">lss</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;linear time independent state space system.</span>
+
+<span class="sd">    Default contstructor is called like ``lss(A,B,C,D)`` and a system can</span>
+<span class="sd">    easily be copied by calling ``lss(sys)`` where `sys` is a</span>
+<span class="sd">    lss object itself.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    A : array_like</span>
+<span class="sd">    B : array_like</span>
+<span class="sd">    C : array_like</span>
+<span class="sd">    D : array_like</span>
+<span class="sd">        State-Space matrices. If one of the matrices is None, it is</span>
+<span class="sd">        replaced by a zero matrix with appropriate dimensions.</span>
+<span class="sd">    reduction : {&#39;truncation_square_root&#39;}, optional</span>
+<span class="sd">        Choose method of reduction. If it isn&#39;t provided, matrices are </span>
+<span class="sd">        used without reduction.</span>
+<span class="sd">    \*\*reduction_options : dict, optional</span>
+<span class="sd">        The arguments with which the reduction method is called.</span>
+
+<span class="sd">    Attributes </span>
+<span class="sd">    ----------</span>
+<span class="sd">    x0 : array_like, optional</span>
+<span class="sd">        Initial state. Defaults to the zero state.</span>
+<span class="sd">    t0 : float</span>
+<span class="sd">        Initial value for `t`</span>
+<span class="sd">    integrator : str</span>
+<span class="sd">        Name of the integrator used by ``scipy.integrate.ode``</span>
+<span class="sd">    integrator_options : dict</span>
+<span class="sd">        Options for the specified integrator that can be set.</span>
+<span class="sd">    reduction_functions : dict</span>
+<span class="sd">        The functions that can be choosen as an input parameter with the</span>
+<span class="sd">        `reduction` keyword.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">x0</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">t0</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">integrator</span> <span class="o">=</span> <span class="s">&#39;dopri5&#39;</span>
+    <span class="n">integrator_options</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">reduction_functions</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;truncation_square_root&#39;</span> <span class="p">:</span> <span class="n">truncation_square_root</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">create_from</span><span class="p">,</span> <span class="o">**</span><span class="n">reduction_options</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a linear state space system</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">create_from</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">)</span> <span class="o">=</span> <span class="n">abcd_normalize</span><span class="p">(</span><span class="o">*</span><span class="n">create_from</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">control</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">,))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">create_from</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="n">create_from</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">A</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">create_from</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">B</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C</span> <span class="o">=</span> <span class="n">create_from</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">C</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">=</span> <span class="n">create_from</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">D</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="o">=</span> <span class="n">create_from</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">=</span> <span class="n">create_from</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">outputs</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">control</span> <span class="o">=</span> <span class="n">create_from</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">control</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Needs 1 or 4 arguments; received </span><span class="si">%i</span><span class="s">.&quot;</span>
+                             <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">create_from</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">reduction_options</span><span class="p">:</span>
+            <span class="n">Nr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hsv</span> <span class="o">=</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">reduction_functions</span><span class="p">[</span><span class="n">reduction_options</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;reduction&quot;</span><span class="p">)](</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="o">**</span><span class="n">reduction_options</span>
+                    <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="lss.x"><a class="viewcode-back" href="../pod.html#pod.lss.x">[docs]</a>    <span class="k">def</span> <span class="nf">x</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;State of the system at current time `t`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">y</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x0</span>
+        <span class="k">return</span> <span class="n">x</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="lss.t"><a class="viewcode-back" href="../pod.html#pod.lss.t">[docs]</a>    <span class="k">def</span> <span class="nf">t</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Current time of the system</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">t</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="lss.y"><a class="viewcode-back" href="../pod.html#pod.lss.y">[docs]</a>    <span class="k">def</span> <span class="nf">y</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">control</span><span class="p">):</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">control</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">u</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">control</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">,</span> <span class="n">u</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="lss.f"><a class="viewcode-back" href="../pod.html#pod.lss.f">[docs]</a>    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">u</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Rhs of the differential equation</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">u</span><span class="p">):</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="lss.setupODE"><a class="viewcode-back" href="../pod.html#pod.lss.setupODE">[docs]</a>    <span class="k">def</span> <span class="nf">setupODE</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the ode solver. All integrator, options and initial value can </span>
+<span class="sd">        be set through class attributes.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">ode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">set_integrator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">integrator</span><span class="p">,</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">integrator_options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">x0</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">,))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">set_initial_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">t0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">set_f_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">control</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="lss.__call__"><a class="viewcode-back" href="../pod.html#pod.lss.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">control</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">force_ode_reset</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the output at specified times with a provided control</span>
+
+<span class="sd">        It is possible to only request the output at one particular time</span>
+<span class="sd">        or provide a list of times. If `times` is a sequence, the output</span>
+<span class="sd">        will be a list of ``nparrays`` at these times, otherwise it&#39;s just</span>
+<span class="sd">        a single ``nparray``. However the control can either be specified as a</span>
+<span class="sd">        function or is a constant array over all times.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        times : list or scalar</span>
+<span class="sd">            The output for these timese will be calculated</span>
+<span class="sd">        control : callable ``control(t, y)`` or array_like, optional</span>
+<span class="sd">            If it is specified, it will be overwritten in the attributes.</span>
+<span class="sd">        force_ode_reset : Boolean, optional</span>
+<span class="sd">            If it&#39;s called, the ode solver is reset and the current attributes</span>
+<span class="sd">            are used.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">control</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">control</span> <span class="o">=</span> <span class="n">control</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">force_ode_reset</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">set_f_params</span><span class="p">(</span><span class="n">control</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">force_ode_reset</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setupODE</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">collections</span><span class="o">.</span><span class="n">Sequence</span><span class="p">):</span>
+            <span class="n">times</span> <span class="o">=</span> <span class="p">[</span><span class="n">times</span><span class="p">]</span>
+            <span class="n">return_list</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">return_list</span> <span class="o">=</span> <span class="bp">True</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">control</span><span class="p">):</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">control</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">u</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">control</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">times</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">,</span> <span class="n">u</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)))</span>
+
+        <span class="k">return</span> <span class="n">results</span> <span class="k">if</span> <span class="n">return_list</span> <span class="k">else</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="lss.solve"><a class="viewcode-back" href="../pod.html#pod.lss.solve">[docs]</a>    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setupODE</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">.  documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Johannes Scharlach.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

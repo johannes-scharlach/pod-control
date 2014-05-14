@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>example2sys module &mdash; .  documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title=".  documentation" href="index.html" />
+    <link rel="next" title="futurescipy module" href="futurescipy.html" />
+    <link rel="prev" title="debug module" href="debug.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="futurescipy.html" title="futurescipy module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="debug.html" title="debug module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">.  documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-example2sys">
+<span id="example2sys-module"></span><h1>example2sys module<a class="headerlink" href="#module-example2sys" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="example2sys.example2sys">
+<tt class="descclassname">example2sys.</tt><tt class="descname">example2sys</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="_modules/example2sys.html#example2sys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example2sys.example2sys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="example2sys.generateRandomExample">
+<tt class="descclassname">example2sys.</tt><tt class="descname">generateRandomExample</tt><big>(</big><em>n, m, p=None, distribution=&lt;bound method Random.gauss of &lt;random.Random object at 0x7fa1240b7020&gt;&gt;, distributionArguments=[0.0, 1.0]</em><big>)</big><a class="reference internal" href="_modules/example2sys.html#generateRandomExample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example2sys.generateRandomExample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a random example of arbitraty order</p>
+<dl class="docutils">
+<dt>How to use:</dt>
+<dd>sys = generateRandomExample(n, m, [p, distribution])</dd>
+<dt>Inputs:</dt>
+<dd><p class="first">n   system order
+m   number of Inputs
+p   number of outputs [p=m]
+distribution</p>
+<blockquote class="last">
+<div>distribution of the matrix values [distribution=gauss(0., 1.)]</div></blockquote>
+</dd>
+<dt>Output:</dt>
+<dd>sys random StateSpaceSystem with the parameters set in the input</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="example2sys.heatSystem">
+<tt class="descclassname">example2sys.</tt><tt class="descname">heatSystem</tt><big>(</big><em>N</em>, <em>L=1.0</em>, <em>g0=0.0</em>, <em>gN=0.0</em><big>)</big><a class="reference internal" href="_modules/example2sys.html#heatSystem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example2sys.heatSystem" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="example2sys.optionPricing">
+<tt class="descclassname">example2sys.</tt><tt class="descname">optionPricing</tt><big>(</big><em>N=None</em>, <em>option='put'</em>, <em>r=0.05</em>, <em>T=1.0</em>, <em>K=100.0</em>, <em>L=None</em><big>)</big><a class="reference internal" href="_modules/example2sys.html#optionPricing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example2sys.optionPricing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="example2sys.stableRandomSystem">
+<tt class="descclassname">example2sys.</tt><tt class="descname">stableRandomSystem</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/example2sys.html#stableRandomSystem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example2sys.stableRandomSystem" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="debug.html"
+                        title="previous chapter">debug module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="futurescipy.html"
+                        title="next chapter">futurescipy module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/example2sys.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="futurescipy.html" title="futurescipy module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="debug.html" title="debug module"
+             >previous</a> |</li>
+        <li><a href="index.html">.  documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Johannes Scharlach.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

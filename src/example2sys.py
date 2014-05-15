@@ -31,11 +31,12 @@ def heatSystem(N, L=1.0, g0=0., gN=0.):
 
     return sys
 
-def optionPricing(N=None, option="put", r=0.05, T=1., K=100., L=None):
+def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
+    """Generates a State-Space System for the heat eqation for option pricing
+
+    """
     if not L:
         L = 50 * K
-    if not N:
-        N = 1000
     h = L/N
 
     if option is "put":

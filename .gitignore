@@ -14,3 +14,4 @@
 *.ind
 *.toc
 *.pyc
+docs/_build/

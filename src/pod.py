@@ -102,8 +102,33 @@ def truncation_square_root(A, B, C,
 
     return ab09ad(dico,job,equil,n,m,p,A,B,C,nr,tol,ldwork=length_cache_array)
 
+def controllabilityTruncation(A,B,C,k=None,check_stability=True):
+    """Truncate the system based on the controllability Gramian
+
+    Solves the Lyapunov Equation for ``AP + PA^H + B B^H`` and computes the
+    eigenvalues and eigenvectors of `P` which are used to truncate the system.
+    """
+    if check_stability and not isStable(A):
+        raise ValueError("This doesn't seem to be a stable system!")
+
+    if not k:
+        k = int(a.shape[0]/2)
+
+    P = sp.linalg.solve_lyapunov(A, -np.dot(B, B.H))
+
+    Lambdak, Uk = sp.linalg.eigh(P, eigvals=(0,k), check_finite=False,
+                                 overwrite_a=True, overwrite_b=True)
+
+    UkH = Uk.H
+
+    A = np.dot(UkH, np.dot(A, Uk))
+    B = np.dot(UkH, B)
+    C = np.dot(C, Uk)
+
+    return k, A, B, C, Lambdak
 
 def isStable(A):
+    """Check if all eigenvalues are in the left half of the complex plane"""
     D, V = np.linalg.eig(A)
     return (D.real < 0).all()
 

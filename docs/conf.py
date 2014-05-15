@@ -201,7 +201,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'sphinx.tex', u'. Documentation',
+  ('index', 'sphinx.tex', u'Proper Orthogonal Decomposition Documentation',
    u'Johannes Scharlach', 'manual'),
 ]
 
@@ -231,7 +231,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'sphinx', u'. Documentation',
+    ('index', 'sphinx', u'Proper Orthogonal Decomposition Documentation',
      [u'Johannes Scharlach'], 1)
 ]
 
@@ -245,7 +245,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'sphinx', u'. Documentation',
+  ('index', 'sphinx', u'Proper Orthogonal Decomposition Documentation',
    u'Johannes Scharlach', 'sphinx', 'One line description of project.',
    'Miscellaneous'),
 ]
@@ -266,7 +266,7 @@ texinfo_documents = [
 # -- Options for Epub output ----------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'.'
+epub_title = u'Proper Orthogonal Decomposition Documentation'
 epub_author = u'Johannes Scharlach'
 epub_publisher = u'Johannes Scharlach'
 epub_copyright = u'2014, Johannes Scharlach'

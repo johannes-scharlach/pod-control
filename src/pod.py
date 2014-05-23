@@ -102,6 +102,64 @@ def truncation_square_root(A, B, C,
 
     return ab09ad(dico,job,equil,n,m,p,A,B,C,nr,tol,ldwork=length_cache_array)
 
+def truncation_square_root_trans_matrix(A,B,C,
+                                        k=0,tol=0.0,
+                                        overwrite_a=True,
+                                        balance=True,check_stability=True,
+                                        length_cache_array=None):
+    """Truncate the system and return transition matrices"""
+    try:
+        from slycot import ab09ax
+    except ImportError:
+        raise ImportError("can't find slycot subroutine ab09ax")
+
+    A, TH = sp.linalg.schur(A, overwrite_a=overwrite_a)
+
+    if check_stability:
+        raise NotImplementedError("Need to implement check for Eigenvalues")
+
+    T = TH.transpose().conj()
+    B, C = np.dot(TH, B), np.dot(C, T)
+
+    nr,A,B,C,hsv,T_,Ti_ = \
+        truncation_square_root_schur(A,B,C,k=k,tol=tol,balance=balance,
+                                     length_cache_array=length_cache_array)
+
+    T, Ti = np.dot(T,T_), np.dot(Ti_,TH)
+
+    return nr,A,B,C,hsv,T,Ti
+
+def truncation_square_root_schur(A,B,C,
+                                 k=0,tol=0.0,
+                                 balance=True,
+                                 length_cache_array=None):
+    """Use balanced truncation on a system with A in real Schur form
+
+    """
+    if balance:
+        job = 'B'
+    else:
+        job = 'N'
+
+    if scale:
+        equil = 'S'
+    else:
+        equil = 'N'
+
+    dico = 'C'
+    n = np.size(A,0)
+    m = np.size(B,1)
+    p = np.size(C,0)
+    nr = k
+
+    if not length_cache_array:
+        length_cache_array = 5*n**2 + n*m + n*p + 10*n + m*p   
+
+    nr,A,B,C,hsv,T_,Ti_ = \
+        ab09ax(dico,job,n,m,p,A,B,C,nr=nr,tol=tol,ldwork=length_cache_array)
+
+    return nr,A,B,C,hsv,T_,Ti_
+
 def controllabilityTruncation(A,B,C,k,check_stability=True):
     """Truncate the system based on the controllability Gramian
 
@@ -136,12 +194,12 @@ def controllabilityTruncation(A,B,C,k,check_stability=True):
 
     N = A.shape[0]
 
-    P = sp.linalg.solve_lyapunov(A, -np.dot(B, B.H))
+    P = sp.linalg.solve_lyapunov(A, -np.dot(B, B.conj().transpose()))
 
     Lambdak, Uk = sp.linalg.eigh(P, eigvals=(N-k,N-1), check_finite=False,
                                  overwrite_a=True, overwrite_b=True)
 
-    UkH = Uk.H
+    UkH = Uk.conj().transpose()
 
     A = np.dot(UkH, np.dot(A, Uk))
     B = np.dot(UkH, B)
@@ -195,7 +253,9 @@ class lss(object):
     t0 = 0.0
     integrator = 'dopri5'
     integrator_options = {}
-    reduction_functions = {'truncation_square_root' : truncation_square_root}
+    reduction_functions = {
+        'truncation_square_root' : truncation_square_root,
+        'controllabilityTruncation' : controllabilityTruncation}
 
     def __init__(self, *create_from, **reduction_options):
         """Initialize a linear state space system
@@ -220,10 +280,14 @@ class lss(object):
                              % len(create_from))
 
         if reduction_options:
-            Nr, self.A, self.B, self.C, self.hsv = \
+            reduction_output = \
                 self.reduction_functions[reduction_options.pop("reduction")](
                     self.A, self.B, self.C, **reduction_options
                     )
+
+            Nr, self.A, self.B, self.C, self.hsv = reduction_output[:4]
+            if len(reduction_output) == 7:
+                self.T, self.Ti = reduction_output[-2:-1]
 
         self.state = None
         self.order = self.A.shape[0]

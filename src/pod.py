@@ -285,7 +285,7 @@ class lss(object):
                     self.A, self.B, self.C, **reduction_options
                     )
 
-            Nr, self.A, self.B, self.C, self.hsv = reduction_output[:4]
+            Nr, self.A, self.B, self.C, self.hsv = reduction_output[:5]
             if len(reduction_output) == 7:
                 self.T, self.Ti = reduction_output[-2:-1]
 

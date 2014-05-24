@@ -108,10 +108,6 @@ def truncation_square_root_trans_matrix(A,B,C,
                                         balance=True,check_stability=True,
                                         length_cache_array=None):
     """Truncate the system and return transition matrices"""
-    try:
-        from slycot import ab09ax
-    except ImportError:
-        raise ImportError("can't find slycot subroutine ab09ax")
 
     A, TH, sdim = linalg.schur(A, sort='lhp', overwrite_a=overwrite_a)
 
@@ -138,6 +134,11 @@ def truncation_square_root_schur(A,B,C,
     """Use balanced truncation on a system with A in real Schur form
 
     """
+    try:
+        from slycot import ab09ax
+    except ImportError:
+        raise ImportError("can't find slycot subroutine ab09ax")
+    
     if balance:
         job = 'B'
     else:

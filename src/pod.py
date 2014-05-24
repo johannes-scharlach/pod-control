@@ -8,7 +8,7 @@ from __future__ import division
 
 import collections
 import numpy as np
-import scipy as sp
+import scipy.linalg
 from numpy import array
 from scipy.integrate import ode
 # from scipy.signal.ltisys import abcd_normalize
@@ -113,7 +113,7 @@ def truncation_square_root_trans_matrix(A,B,C,
     except ImportError:
         raise ImportError("can't find slycot subroutine ab09ax")
 
-    A, TH = sp.linalg.schur(A, overwrite_a=overwrite_a)
+    A, TH = linalg.schur(A, overwrite_a=overwrite_a)
 
     if check_stability:
         raise NotImplementedError("Need to implement check for Eigenvalues")
@@ -194,9 +194,9 @@ def controllabilityTruncation(A,B,C,k,check_stability=True):
 
     N = A.shape[0]
 
-    P = sp.linalg.solve_lyapunov(A, -np.dot(B, B.conj().transpose()))
+    P = linalg.solve_lyapunov(A, -np.dot(B, B.conj().transpose()))
 
-    Lambdak, Uk = sp.linalg.eigh(P, eigvals=(N-k,N-1), check_finite=False,
+    Lambdak, Uk = linalg.eigh(P, eigvals=(N-k,N-1), check_finite=False,
                                  overwrite_a=True, overwrite_b=True)
 
     UkH = Uk.conj().transpose()
@@ -209,7 +209,7 @@ def controllabilityTruncation(A,B,C,k,check_stability=True):
 
 def isStable(A):
     """Check if all eigenvalues are in the left half of the complex plane"""
-    D, V = np.linalg.eig(A)
+    D, V = linalg.eig(A)
     return (D.real < 0).all()
 
 class lss(object):
@@ -255,7 +255,10 @@ class lss(object):
     integrator_options = {}
     reduction_functions = {
         'truncation_square_root' : truncation_square_root,
-        'controllabilityTruncation' : controllabilityTruncation}
+        'controllabilityTruncation' : controllabilityTruncation,
+        'truncation_square_root_trans_matrix' : \
+            truncation_square_root_trans_matrix,
+        'truncation_square_root_schur' : truncation_square_root_schur}
 
     def __init__(self, *create_from, **reduction_options):
         """Initialize a linear state space system

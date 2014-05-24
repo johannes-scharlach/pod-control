@@ -8,7 +8,7 @@ from __future__ import division
 
 import collections
 import numpy as np
-import scipy.linalg
+from scipy import linalg
 from numpy import array
 from scipy.integrate import ode
 # from scipy.signal.ltisys import abcd_normalize
@@ -113,10 +113,12 @@ def truncation_square_root_trans_matrix(A,B,C,
     except ImportError:
         raise ImportError("can't find slycot subroutine ab09ax")
 
-    A, TH = linalg.schur(A, overwrite_a=overwrite_a)
+    A, TH, sdim = linalg.schur(A, sort='lhp', overwrite_a=overwrite_a)
 
-    if check_stability:
-        raise NotImplementedError("Need to implement check for Eigenvalues")
+    if sdim < A.shape[0]:
+        raise ValueError("This is not a stable system. \n" +
+                         "The eigenvalues are not all in the left half of " +
+                         "the complex plane.")
 
     T = TH.transpose().conj()
     B, C = np.dot(TH, B), np.dot(C, T)
@@ -140,11 +142,6 @@ def truncation_square_root_schur(A,B,C,
         job = 'B'
     else:
         job = 'N'
-
-    if scale:
-        equil = 'S'
-    else:
-        equil = 'N'
 
     dico = 'C'
     n = np.size(A,0)

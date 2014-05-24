@@ -2,6 +2,7 @@ from __future__ import division
 import random
 import math
 import numpy as np
+from scipy import linalg
 from matplotlib.pyplot import *
 import example2sys as e2s
 import pod
@@ -73,9 +74,9 @@ def optionPricingComparison(N=1000, k=None,
 
     sys = e2s.optionPricing(N, option, r, T, K, L)
     sys_balanced_truncated = \
-        lss(sys, reduction="truncation_square_root_trans_matrix", k=k)
+        pod.lss(sys, reduction="truncation_square_root_trans_matrix", k=k)
     sys_control_truncated = \
-        lss(sys, reduction="controllability_truncation", k=k)
+        pod.lss(sys, reduction="controllability_truncation", k=k)
 
     timeSteps = np.linspace(0, 1, 100)
 

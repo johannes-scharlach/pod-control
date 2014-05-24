@@ -32,9 +32,6 @@ def runAnalysis(n, k, N=1, example='butter', T=20, sigma=1., integrator='dopri5'
 
     #return Y, Yhat, T, U
 
-def x0(n):
-    return np.array([0. for _n in range(n)])
-
 def plotResults(Y, T, label=None, legend_loc='upper left', show_legend=False):
     timeSteps = range(1, T+1)
     plot(timeSteps, Y, label=label)
@@ -69,4 +66,27 @@ class Timer(object):
         print('Time elapsed {} seconds'.format(self.elapsed))
         return False
 
-        
+def optionPricingComparison(N=1000, k=None,
+                            option="put", r=0.05, T=1., K=100., L=None):
+    if k is None:
+        k = min(1,int(N/50))
+
+    sys = e2s.optionPricing(N, option, r, T, K, L)
+    sys_balanced_truncated = \
+        lss(sys, reduction="truncation_square_root_trans_matrix", k=k)
+    sys_control_truncated = \
+        lss(sys, reduction="controllability_truncation", k=k)
+
+    timeSteps = np.linspace(0, 1, 100)
+
+    print "unreduced system"
+    with Timer():
+        Y = sys(timeSteps)
+
+    print "system reduced with balanced truncation"
+    with Timer():
+        Y_balanced_truncated = sys_balanced_truncated(timeSteps)
+
+    print "system reduced with controllability gramian"
+    with Timer():
+        Y_control_truncated = sys_control_truncated(timeSteps)

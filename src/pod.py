@@ -103,7 +103,7 @@ def truncation_square_root(A, B, C,
     return ab09ad(dico,job,equil,n,m,p,A,B,C,nr,tol,ldwork=length_cache_array)
 
 def truncation_square_root_trans_matrix(A,B,C,
-                                        k=0,tol=0.0,
+                                        k=None,tol=0.0,
                                         overwrite_a=True,
                                         balance=True,check_stability=True,
                                         length_cache_array=None):
@@ -128,7 +128,7 @@ def truncation_square_root_trans_matrix(A,B,C,
     return nr,A,B,C,hsv,T,Ti
 
 def truncation_square_root_schur(A,B,C,
-                                 k=0,tol=0.0,
+                                 k=None,tol=0.0,
                                  balance=True,
                                  length_cache_array=None):
     """Use balanced truncation on a system with A in real Schur form
@@ -138,7 +138,7 @@ def truncation_square_root_schur(A,B,C,
         from slycot import ab09ax
     except ImportError:
         raise ImportError("can't find slycot subroutine ab09ax")
-    
+
     if balance:
         job = 'B'
     else:
@@ -158,7 +158,7 @@ def truncation_square_root_schur(A,B,C,
 
     return nr,A,B,C,hsv,T_,Ti_
 
-def controllabilityTruncation(A,B,C,k,check_stability=True):
+def controllability_truncation(A,B,C,k,check_stability=True):
     """Truncate the system based on the controllability Gramian
 
     Solves the Lyapunov Equation for ``AP + PA^H + B B^H`` and computes the
@@ -203,7 +203,7 @@ def controllabilityTruncation(A,B,C,k,check_stability=True):
     B = np.dot(UkH, B)
     C = np.dot(C, Uk)
 
-    return k, A, B, C, Lambdak
+    return k, A, B, C, Lambdak, Uk, UkH
 
 def isStable(A):
     """Check if all eigenvalues are in the left half of the complex plane"""
@@ -253,7 +253,7 @@ class lss(object):
     integrator_options = {}
     reduction_functions = {
         'truncation_square_root' : truncation_square_root,
-        'controllabilityTruncation' : controllabilityTruncation,
+        'controllability_truncation' : controllability_truncation,
         'truncation_square_root_trans_matrix' : \
             truncation_square_root_trans_matrix,
         'truncation_square_root_schur' : truncation_square_root_schur}
@@ -265,16 +265,12 @@ class lss(object):
 
         if len(create_from) == 4:
             (self.A, self.B, self.C, self.D) = abcd_normalize(*create_from)
-            self.inputs = self.B.shape[1]
-            self.outputs = self.C.shape[0]
             self.control = np.zeros((self.inputs,))
         elif len(create_from) == 1:
             self.A = create_from[0].A
             self.B = create_from[0].B
             self.C = create_from[0].C
             self.D = create_from[0].D
-            self.inputs = create_from[0].inputs
-            self.outputs = create_from[0].outputs
             self.control = create_from[0].control
         else:
             raise ValueError("Needs 1 or 4 arguments; received %i."
@@ -283,15 +279,25 @@ class lss(object):
         if reduction_options:
             reduction_output = \
                 self.reduction_functions[reduction_options.pop("reduction")](
-                    self.A, self.B, self.C, **reduction_options
-                    )
+                    self.A, self.B, self.C, **reduction_options)
 
             Nr, self.A, self.B, self.C, self.hsv = reduction_output[:5]
             if len(reduction_output) == 7:
-                self.T, self.Ti = reduction_output[-2:-1]
+                self.T, self.Ti = reduction_output[-2:]
 
         self.state = None
-        self.order = self.A.shape[0]
+
+    @property
+    def order(self):
+        return self.A.shape[0]
+
+    @property
+    def inputs(self):
+        return self.B.shape[1]
+
+    @property
+    def outputs(self):
+        return self.C.shape[0]
 
     @property
     def x(self):

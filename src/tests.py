@@ -84,6 +84,41 @@ class testLss(unittest.TestCase):
 
         assert_array_equal(sys.f(0., np.array(x), u), np.array([10+2-3., 2-3.]))
 
+    def test_truncation_functions(self):
+        """Reduce system of order 3 and check truncation matrices.
+
+        Matrix `A` is in real schur form with all eigenvalues in the left half
+        of the complex plane. The system is reduced from order 3 to orders 1 
+        and 2. Order, number of inputs and outputs and the pseudo inverse
+        property of T and Ti of the systems are checked.
+        
+        """
+        A = np.array([[-6, -3, 1],
+                      [0, -2.2, 6],
+                      [0, 0, -0.5]])
+        B = np.array([[1.],
+                      [1.],
+                      [1.]])
+        C = np.array([[2., 1., 0.002]])
+        D = None
+
+        sys = lss(A,B,C,D)
+
+        for reduction in lss.reduction_functions:
+            for k in [1,2]:
+                rsys = lss(sys, reduction=reduction, k=k)
+
+                assert rsys.order == k
+                assert rsys.inputs == 1
+                assert rsys.outputs == 1
+
+                if hasattr(rsys, 'T'):
+                    assert rsys.T.shape == (3,k)
+                    assert rsys.Ti.shape == (k,3)
+    
+                    assert_array_almost_equal(np.dot(rsys.Ti, rsys.T),
+                                              np.eye(k))
+
 
 if __name__ == '__main__':
     unittest.main()

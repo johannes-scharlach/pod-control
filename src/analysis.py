@@ -3,7 +3,7 @@ import random
 import math
 import numpy as np
 from scipy import linalg
-from matplotlib.pyplot import *
+from matplotlib.pyplot import plot, subplot, legend
 import example2sys as e2s
 import pod
 import time
@@ -70,13 +70,21 @@ class Timer(object):
 def optionPricingComparison(N=1000, k=None,
                             option="put", r=0.05, T=1., K=100., L=None):
     if k is None:
-        k = min(1,int(N/50))
+        k = max(1,int(N/50))
 
     sys = e2s.optionPricing(N, option, r, T, K, L)
+
+    sys_auto_truncated = \
+        pod.lss(sys, reduction="truncation_square_root_trans_matrix")
+    sys_auto_truncated.x0 = np.dot(sys_auto_truncated.Ti, sys.x0)
+
     sys_balanced_truncated = \
         pod.lss(sys, reduction="truncation_square_root_trans_matrix", k=k)
+    sys_balanced_truncated.x0 = np.dot(sys_balanced_truncated.Ti, sys.x0)
+
     sys_control_truncated = \
         pod.lss(sys, reduction="controllability_truncation", k=k)
+    sys_control_truncated.x0 = np.dot(sys_control_truncated.Ti, sys.x0)
 
     timeSteps = np.linspace(0, 1, 100)
 
@@ -84,10 +92,33 @@ def optionPricingComparison(N=1000, k=None,
     with Timer():
         Y = sys(timeSteps)
 
-    print "system reduced with balanced truncation"
+    print "system reduced with balanced truncation, auto sized"
+    with Timer():
+        Y_auto_truncated = sys_auto_truncated(timeSteps)
+
+    print 'system reduced with balanced truncation, k={}'.format(k)
     with Timer():
         Y_balanced_truncated = sys_balanced_truncated(timeSteps)
 
     print "system reduced with controllability gramian"
     with Timer():
         Y_control_truncated = sys_control_truncated(timeSteps)
+
+    eps_auto_truncated = [linalg.norm(y-yhat, ord=1)
+                          for y, yhat
+                          in  zip(Y, Y_auto_truncated)]
+    eps_balanced_truncated = [linalg.norm(y-yhat, ord=1)
+                              for y, yhat
+                              in  zip(Y, Y_balanced_truncated)]
+    eps_control_truncated = [linalg.norm(y-yhat, ord=1)
+                             for y, yhat
+                             in  zip(Y, Y_control_truncated)]
+
+    print "The original system has order ", sys.order
+    print "The auto-sized system has order ", sys_auto_truncated.order
+    print "and a total error of ", sum(eps_auto_truncated)
+    print "The balanced and truncated system has order ", \
+        sys_balanced_truncated.order
+    print "and a total error of ", sum(eps_balanced_truncated)
+    print "The control truncated system has order ", sys_control_truncated.order
+    print "and a total error of ", sum(eps_control_truncated)

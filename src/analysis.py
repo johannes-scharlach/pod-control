@@ -72,21 +72,32 @@ def optionPricingComparison(N=1000, k=None,
     if k is None:
         k = max(1,int(N/50))
 
-    sys = e2s.optionPricing(N, option, r, T, K, L)
+    print "SETUP\n===================="
+    print "original system"
+    with Timer():
+        sys = e2s.optionPricing(N=N, option=option, r=r, T=T, K=K, L=L)
 
-    sys_auto_truncated = \
-        pod.lss(sys, reduction="truncation_square_root_trans_matrix")
-    sys_auto_truncated.x0 = np.dot(sys_auto_truncated.Ti, sys.x0)
+    print "auto truncated"
+    with Timer():
+        sys_auto_truncated = \
+            pod.lss(sys, reduction="truncation_square_root_trans_matrix")
+        sys_auto_truncated.x0 = np.dot(sys_auto_truncated.Ti, sys.x0)
 
-    sys_balanced_truncated = \
-        pod.lss(sys, reduction="truncation_square_root_trans_matrix", k=k)
-    sys_balanced_truncated.x0 = np.dot(sys_balanced_truncated.Ti, sys.x0)
+    print "balanced truncated with k =", k
+    with Timer():
+        sys_balanced_truncated = \
+            pod.lss(sys, reduction="truncation_square_root_trans_matrix", k=k)
+        sys_balanced_truncated.x0 = np.dot(sys_balanced_truncated.Ti, sys.x0)
 
-    sys_control_truncated = \
-        pod.lss(sys, reduction="controllability_truncation", k=k)
-    sys_control_truncated.x0 = np.dot(sys_control_truncated.Ti, sys.x0)
+    print "controllability gramian reduction"
+    with Timer(): 
+        sys_control_truncated = \
+            pod.lss(sys, reduction="controllability_truncation", k=k)
+        sys_control_truncated.x0 = np.dot(sys_control_truncated.Ti, sys.x0)
 
-    timeSteps = np.linspace(0, 1, 100)
+    print "============\nEVALUATIONS\n==============="
+
+    timeSteps = list(np.linspace(0, 1, 100))
 
     print "unreduced system"
     with Timer():
@@ -104,21 +115,23 @@ def optionPricingComparison(N=1000, k=None,
     with Timer():
         Y_control_truncated = sys_control_truncated(timeSteps)
 
-    eps_auto_truncated = [linalg.norm(y-yhat, ord=1)
+    eps_auto_truncated = [linalg.norm(y-yhat, ord=np.inf)
                           for y, yhat
                           in  zip(Y, Y_auto_truncated)]
-    eps_balanced_truncated = [linalg.norm(y-yhat, ord=1)
+    eps_balanced_truncated = [linalg.norm(y-yhat, ord=np.inf)
                               for y, yhat
                               in  zip(Y, Y_balanced_truncated)]
-    eps_control_truncated = [linalg.norm(y-yhat, ord=1)
+    eps_control_truncated = [linalg.norm(y-yhat, ord=np.inf)
                              for y, yhat
                              in  zip(Y, Y_control_truncated)]
 
     print "The original system has order ", sys.order
     print "The auto-sized system has order ", sys_auto_truncated.order
-    print "and a total error of ", sum(eps_auto_truncated)
+    print "and a total error of ", max(eps_auto_truncated)
     print "The balanced and truncated system has order ", \
         sys_balanced_truncated.order
-    print "and a total error of ", sum(eps_balanced_truncated)
+    print "and a total error of ", max(eps_balanced_truncated)
     print "The control truncated system has order ", sys_control_truncated.order
-    print "and a total error of ", sum(eps_control_truncated)
+    print "and a total error of ", max(eps_control_truncated)
+
+    raise Exception

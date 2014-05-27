@@ -324,7 +324,7 @@ class lss(object):
         else:
             def u(t, y):
                 return self.control
-        return np.dot(self.C, self.x) + np.dot(self.D, u(t, self.x))
+        return np.dot(self.C, self.x) + np.dot(self.D, u(self.t, self.x))
 
     def f(self, t, y, u):
         """Rhs of the differential equation

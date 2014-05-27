@@ -11,23 +11,29 @@ def example2sys(filename):
     data = scipy.io.loadmat('example_data/' + filename)
     return pod.lss(data['A'], data['B'], data['C'], data['D'])
 
-def heatSystem(N, L=1.0, g0=0., gN=0.):
+def heatSystem(N, L=1.0, g0_scale=None, gN_scale=None):
+
+    inputs = (g0_scale is not None) + (gN_scale is not None)
+
     h2 = (L/N)**2
     main_diagonal = np.ones(N-1) * (-2 * h2)
     secondary_diagonal = np.ones(N-2) * h2
 
     A = np.diag(main_diagonal) + np.diag(secondary_diagonal, 1) + \
             np.diag(secondary_diagonal, -1)
-    B = np.zeros((N-1,2))
-    B[0][0] = h2
-    B[-1][-1] = h2
+    B = np.zeros((N-1,inputs))
+    if g0_scale:
+        B[0][0] = h2 * g0_scale
+    if gN_scale:
+        B[-1][-1] = h2 * gN_scale
     C = np.concatenate((np.zeros((1,N-1)), np.eye(N-1), np.zeros((1,N-1))))
-    D = np.zeros((N+1,2))
-    D[0][0] = 1
-    D[-1][-1] = 1
+    D = np.zeros((N+1,inputs))
+    if g0_scale:
+        D[0][0] = 1
+    if gN_scale:
+        D[-1][-1] = 1
 
     sys = pod.lss(A, B, C, D)
-    sys.control = np.array([g0, gN])
 
     return sys
 
@@ -36,25 +42,27 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
 
     """
     if not L:
-        L = 50 * K
+        L = 10 * K
     h = L/N
 
     if option is "put":
         def boundary_conditions(t, y=None):
-            a = math.e**(-r*(T-t))*K
-            b = 0.
-            return np.array([a, b])
+            a = math.e**(-r*(-t))
+            return np.array([a])
+        g0_scale = K
+        gN_scale = None
         x0 = [max(K-h*i, 0) for i in range(1,N)]
     elif option is "call":
         def boundary_conditions(t, y=None):
-            a = 0.
-            b = L - math.e**(-r*(T-t))*K
-            return np.array([a, b])
+            b = 1 - math.e**(-r*(-t))*K/L
+            return np.array([b])
+        g0_scale = None
+        gN_scale = L
         x0 = [max(h*i-K, 0) for i in range(1,N)]
     else:
         raise ValueError("No such option aviable")
 
-    sys = heatSystem(N, L=L)
+    sys = heatSystem(N, L=L, g0_scale=g0_scale, gN_scale=gN_scale)
     sys.control = boundary_conditions
     sys.x0 = np.array(x0)
 

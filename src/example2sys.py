@@ -12,7 +12,12 @@ def example2sys(filename):
     return pod.lss(data['A'], data['B'], data['C'], data['D'])
 
 def heatSystem(N, L=1.0, g0_scale=None, gN_scale=None):
+    """Generate a state space system that solves the heat equation.
 
+    This sets up the matrices `A`, `B`, `C` and `D` where B is scaled in a way
+    that the input (boundary conditions) should have an average norm of 1.
+    This allows for proper reduction of the model. Boundary conditions and
+    start vector need to be set separately."""
     inputs = (g0_scale is not None) + (gN_scale is not None)
 
     h2 = (L/N)**2
@@ -38,7 +43,7 @@ def heatSystem(N, L=1.0, g0_scale=None, gN_scale=None):
     return sys
 
 def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
-    """Generates a State-Space System for the heat eqation for option pricing
+    """Generate a State-Space System for the heat eqation for option pricing
 
     """
     if not L:

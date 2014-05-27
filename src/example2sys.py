@@ -14,10 +14,12 @@ def example2sys(filename):
 def heatSystem(N, L=1.0, g0_scale=None, gN_scale=None):
     """Generate a state space system that solves the heat equation.
 
-    This sets up the matrices `A`, `B`, `C` and `D` where B is scaled in a way
-    that the input (boundary conditions) should have an average norm of 1.
+    This sets up the matrices `A`, `B`, `C` and `D` where `B` is scaled in a
+    way that the input (boundary conditions) should have an average norm of 1.
     This allows for proper reduction of the model. Boundary conditions and
-    start vector need to be set separately."""
+    start vector need to be set separately.
+
+    """
     inputs = (g0_scale is not None) + (gN_scale is not None)
 
     h2 = (L/N)**2
@@ -73,6 +75,50 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
 
     return sys
 
+def rcLadder(resistors, capacitors, input_scale=1.):
+    """A system of a rcLadder
+
+    Parameters
+    ----------
+        resistors : iterable
+            The resistors :math:``R_1`` until :math:``R_N`` that are between the
+            points :math:``e_[i-1]`` and :math:``e_i.``
+        capacitors : iterable
+            The capacities :math:``C_i`` between the points :math:``e_i`` and
+            the earth.
+        input_scale : decimal, optional
+            The scaling that is needed to keep the norm of the input function of
+            the system equal to one.
+
+    Returns
+    -------
+        sys : pod.lss
+            The linear state space system that solves the problem with input
+            function :math:``e_0`` and output :math:``e_N``
+
+    """
+    N = len(capacitors)
+
+    conductivities = [1./R for R in resistors]
+    conductivities.append[0.]
+    conductivities = np.array(conductivities)
+
+    capacitors = np.array(capacitors)
+
+    main_diagonal = - (conductivities[:-1]) + conductivities[1:]) / capacitors
+    left_diagonal = conductivities[1:-1] / capacitors[1:]
+    right_diagonal = conductivities[1:-1] / capacitors[:-1]
+
+    A = np.diag(main_diagonal) + np.diag(right_diagonal, 1) + \
+            np.diag(left_diagonal, -1)
+    B = np.zeros((N,1))
+    B[0][0] = conductivities[0]/capacitors[0] * input_scale
+    C = np.zeros((1,N))
+    C[-1][-1] = 1.
+    D = None
+
+    return pod.lss(A,B,C,D)
+
 def generateRandomExample(n, m, p=None,
         distribution=random.gauss, distributionArguments=[0., 1.]):
     """Generate a random example of arbitraty order
@@ -89,8 +135,8 @@ def generateRandomExample(n, m, p=None,
 
     Output:
         sys random StateSpaceSystem with the parameters set in the input
-    """
 
+    """
     if p is None:
         p = m
 

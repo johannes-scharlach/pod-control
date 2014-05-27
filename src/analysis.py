@@ -115,13 +115,15 @@ def optionPricingComparison(N=1000, k=None,
     with Timer():
         Y_control_truncated = sys_control_truncated(timeSteps)
 
-    eps_auto_truncated = [linalg.norm(y-yhat, ord=np.inf)
+    norm_order = np.inf
+
+    eps_auto_truncated = [linalg.norm(y-yhat, ord=norm_order)
                           for y, yhat
                           in  zip(Y, Y_auto_truncated)]
-    eps_balanced_truncated = [linalg.norm(y-yhat, ord=np.inf)
+    eps_balanced_truncated = [linalg.norm(y-yhat, ord=norm_order)
                               for y, yhat
                               in  zip(Y, Y_balanced_truncated)]
-    eps_control_truncated = [linalg.norm(y-yhat, ord=np.inf)
+    eps_control_truncated = [linalg.norm(y-yhat, ord=norm_order)
                              for y, yhat
                              in  zip(Y, Y_control_truncated)]
 

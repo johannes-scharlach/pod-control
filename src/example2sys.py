@@ -103,8 +103,8 @@ def rcLadder(resistors, capacitors, input_scale=1., outputs=[-1]):
     N = len(capacitors)
 
     conductivities = [1./R for R in resistors]
-    if len(conductivities == N-1):
-        conductivities.append[0.]
+    if len(conductivities) == N:
+        conductivities.append(0.)
     conductivities = np.array(conductivities)
 
     capacitors = np.array(capacitors)
@@ -124,13 +124,18 @@ def rcLadder(resistors, capacitors, input_scale=1., outputs=[-1]):
 
     return pod.lss(A,B,C,D)
 
-def thermalRCNetwork(R, C, r, n):
+def thermalRCNetwork(R, C, n, r):
     capacitors = [(r-1)*(i+1)/(r**n-1)*C for i in range(n)]
-    resistors = [2 + r] + [r**i + r**(i+1)(i+1<n) for i in range(1,n)]
+    resistors = [2 + r] + [r**i + r**(i+1)*(i+1<n) for i in range(1,n)]
     resistors = np.array(resistors) * ((r-1)/(r**n-1)*.5*R)
     resistors = list(resistors)
 
     return capacitors[0], rcLadder(resistors, capacitors[1:], outputs=[0])
+
+def _neg(x):
+    if x<0.:
+        return -x
+    return x
 
 def generateRandomExample(n, m, p=None,
         distribution=random.gauss, distributionArguments=[0., 1.]):
@@ -156,7 +161,7 @@ def generateRandomExample(n, m, p=None,
     if p is None:
         p = m
 
-    A = [[distribution(*distributionArguments) for i in range(n)]
+    A = [[_neg(distribution(*distributionArguments)*(i>=j)) for i in range(n)]
             for j in range(n)]
     B = [[distribution(*distributionArguments) for i in range(m)]
             for j in range(n)]

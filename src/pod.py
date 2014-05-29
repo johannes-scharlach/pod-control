@@ -18,7 +18,7 @@ from futurescipy import abcd_normalize
 
 
 def truncation_square_root(A, B, C,
-                           k=0, tol=0.0,
+                           k=None, tol=0.0,
                            balance=True, scale=True,
                            check_stability=True,
                            length_cache_array=None):

@@ -75,37 +75,41 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
 
     return sys
 
-def rcLadder(resistors, capacitors, input_scale=1.):
+def rcLadder(resistors, capacitors, input_scale=1., outputs=[-1]):
     """A system of a rcLadder
 
     Parameters
     ----------
         resistors : iterable
-            The resistors :math:``R_1`` until :math:``R_N`` that are between the
-            points :math:``e_[i-1]`` and :math:``e_i.``
+            The resistors ``R_1`` until ``R_N`` or
+            ``R_[N+1]`` that are between the points ``e_[i-1]``
+            and ``e_i.``
         capacitors : iterable
-            The capacities :math:``C_i`` between the points :math:``e_i`` and
+            The capacities ``C_i`` between the points ``e_i`` and
             the earth.
         input_scale : decimal, optional
-            The scaling that is needed to keep the norm of the input function of
-            the system equal to one.
+            The scaling that is needed to keep the norm of the input function
+            of the system equal to one.
+        outputs : list, optional
+            List of the outputs indices that should be returned. Default is
+            ``[-1]`` so that the last value gets returned.
 
     Returns
     -------
         sys : pod.lss
             The linear state space system that solves the problem with input
-            function :math:``e_0`` and output :math:``e_N``
-
+            function ``e_0``
     """
     N = len(capacitors)
 
     conductivities = [1./R for R in resistors]
-    conductivities.append[0.]
+    if len(conductivities == N-1):
+        conductivities.append[0.]
     conductivities = np.array(conductivities)
 
     capacitors = np.array(capacitors)
 
-    main_diagonal = - (conductivities[:-1]) + conductivities[1:]) / capacitors
+    main_diagonal = - (conductivities[:-1] + conductivities[1:]) / capacitors
     left_diagonal = conductivities[1:-1] / capacitors[1:]
     right_diagonal = conductivities[1:-1] / capacitors[:-1]
 
@@ -113,28 +117,40 @@ def rcLadder(resistors, capacitors, input_scale=1.):
             np.diag(left_diagonal, -1)
     B = np.zeros((N,1))
     B[0][0] = conductivities[0]/capacitors[0] * input_scale
-    C = np.zeros((1,N))
-    C[-1][-1] = 1.
+    C = np.zeros((len(outputs),N))
+    for i in range(len(outputs)):
+        C[i][outputs[i]] = 1.
     D = None
 
     return pod.lss(A,B,C,D)
+
+def thermalRCNetwork(R, C, r, n):
+    capacitors = [(r-1)*(i+1)/(r**n-1)*C for i in range(n)]
+    resistors = [2 + r] + [r**i + r**(i+1)(i+1<n) for i in range(1,n)]
+    resistors = np.array(resistors) * ((r-1)/(r**n-1)*.5*R)
+    resistors = list(resistors)
+
+    return capacitors[0], rcLadder(resistors, capacitors[1:], outputs=[0])
 
 def generateRandomExample(n, m, p=None,
         distribution=random.gauss, distributionArguments=[0., 1.]):
     """Generate a random example of arbitraty order
 
-    How to use:
-        sys = generateRandomExample(n, m, [p, distribution])
-
-    Inputs:
-        n   system order
-        m   number of Inputs
-        p   number of outputs [p=m]
-        distribution
+    Parameters
+    ----------
+        n : int
+            system order
+        m : int
+            number of Inputs
+        p : int
+            number of outputs ``[p=m]``
+        distribution : callable
             distribution of the matrix values [distribution=gauss(0., 1.)]
 
-    Output:
-        sys random StateSpaceSystem with the parameters set in the input
+    Returns
+    -------
+        sys : pod.lss
+            random StateSpaceSystem with the parameters set in the input
 
     """
     if p is None:

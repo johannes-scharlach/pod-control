@@ -6,6 +6,7 @@ from __future__ import division
 import numpy as np
 import scipy as sp
 from pod import *
+from example2sys import *
 import unittest
 from numpy.testing import assert_array_equal, assert_array_almost_equal, \
                           assert_allclose
@@ -14,7 +15,7 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal, \
 def _number_to_array(s):
     return np.array([s])
 
-class testLss(unittest.TestCase):
+class testPod(unittest.TestCase):
     """test lss functionalities"""
     def test_abcd_normalize(self):
         A, B = np.zeros((5,5)), np.ones((5,1))
@@ -91,7 +92,7 @@ class testLss(unittest.TestCase):
         of the complex plane. The system is reduced from order 3 to orders 1 
         and 2. Order, number of inputs and outputs and the pseudo inverse
         property of T and Ti of the systems are checked.
-        
+
         """
         A = np.array([[-6, -3, 1],
                       [0, -2.2, 6],
@@ -118,6 +119,28 @@ class testLss(unittest.TestCase):
     
                     assert_array_almost_equal(np.dot(rsys.Ti, rsys.T),
                                               np.eye(k))
+
+class testExample2sys(unittest.TestCase):
+    """Test the example system generator"""
+    def test_rcLadder(self):
+        resistors = [1.0, 1.0, 1.0]
+        capacitors = [1.0, 1.0, 1.0]
+
+        sys = rcLadder(resistors, capacitors)
+        sys2 = rcLadder(resistors + [np.inf], capacitors)
+
+        assert sys.inputs == 1
+        assert sys.outputs == 1
+        assert sys.order == 3
+        for matrix in ['A', 'B', 'C', 'D']:
+            assert_array_equal(getattr(sys, matrix), getattr(sys2, matrix))
+
+    def test_thermalRCNetwork(self):
+        C0, sys = thermalRCNetwork(1,1,100,3)
+
+        assert sys.inputs == 1
+        assert sys.outputs == 1
+        assert sys.order == 99
 
 
 if __name__ == '__main__':

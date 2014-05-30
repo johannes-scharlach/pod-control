@@ -124,7 +124,7 @@ def rcLadder(resistors, capacitors, input_scale=1., outputs=[-1]):
 
     return pod.lss(A,B,C,D)
 
-def thermalRCNetwork(R, C, n, r, u):
+def thermalRCNetwork(R, C, n, r, u, input_scale=1.):
     capacitors = [(r-1)*(i+1)/(r**n-1)*C for i in range(n)]
     resistors = [2 + r] + [r**i + r**(i+1)*(i+1<n) for i in range(1,n)]
     resistors = np.array(resistors) * ((r-1)/(r**n-1)*.5*R)

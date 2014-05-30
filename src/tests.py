@@ -43,13 +43,21 @@ class testPod(unittest.TestCase):
         R = [0., 5., 5., 15., 10.]
         R = map(_number_to_array, R)
 
-        A, B = np.zeros((5,5)), np.ones((5,1))
+        A, B = None, np.ones((5,1))
         C, D = np.ones((1,5)), None
 
         sys = lss(A,B,C,D)
 
         for i in range(1, N):
             self.assertAlmostEqual(sys(T[i], U[i]), R[i])
+            assert sys.t == T[i]
+
+        sys.setupODE()
+        timeWithSteps = [list(np.linspace(t-1,t,2**t)) for t in T]
+        for i in range(1,N):
+            results = sys(timeWithSteps[i], U[i])
+            self.assertAlmostEqual(results[-1], R[i])
+            assert sys.t == timeWithSteps[i][-1]
 
         R = [r+u for r, u in zip(R, U)]
         R = map(np.array, R)
@@ -136,7 +144,7 @@ class testExample2sys(unittest.TestCase):
             assert_array_equal(getattr(sys, matrix), getattr(sys2, matrix))
 
     def test_thermalRCNetwork(self):
-        C0, sys = thermalRCNetwork(1,1,100,3)
+        C0, sys = thermalRCNetwork(1,1,100,3, lambda t, x=None: np.array([1.]))
 
         assert sys.inputs == 1
         assert sys.outputs == 1

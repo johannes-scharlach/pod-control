@@ -276,7 +276,7 @@ class lss(object):
             raise ValueError("Needs 1 or 4 arguments; received %i."
                              % len(create_from))
 
-        if reduction_options:
+        if reduction_options.get("reduction", False):
             reduction_output = \
                 self.reduction_functions[reduction_options.pop("reduction")](
                     self.A, self.B, self.C, **reduction_options)

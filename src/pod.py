@@ -341,7 +341,7 @@ class lss(object):
         be set through class attributes.
 
         """
-        self.state = ode(self.f, jac=self.A)
+        self.state = ode(self.f, jac=lambda t, y, *f_args: self.A)
         self.state.set_integrator(self.integrator,**self.integrator_options)
         if self.x0 is None:
             self.x0 = np.zeros((self.order,))

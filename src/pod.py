@@ -272,6 +272,11 @@ class lss(object):
             self.C = create_from[0].C
             self.D = create_from[0].D
             self.control = create_from[0].control
+            self.x0 = create_from[0].x0
+            self.t0 = create_from[0].t0
+            self.integrator = create_from[0].integrator
+            self.integrator_options = create_from[0].integrator_options
+            self.reduction_functions = create_from[0].reduction_functions
         else:
             raise ValueError("Needs 1 or 4 arguments; received %i."
                              % len(create_from))
@@ -284,6 +289,11 @@ class lss(object):
             Nr, self.A, self.B, self.C, self.hsv = reduction_output[:5]
             if len(reduction_output) == 7:
                 self.T, self.Ti = reduction_output[-2:]
+                if self.x0 is not None:
+                    if (self.x0 != 0).any():
+                        self.x0 = np.dot(self.Ti, self.x0)
+                    else:
+                        self.x0 = np.zeros((self.order,))
 
         self.state = None
 

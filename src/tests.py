@@ -5,6 +5,7 @@
 from __future__ import division
 import numpy as np
 import scipy as sp
+import math
 from pod import *
 from example2sys import *
 import unittest
@@ -27,13 +28,13 @@ class testPod(unittest.TestCase):
         assert_array_equal(sys_without_D.D, D)
 
     def test_zero_control(self):
-        A, B = np.zeros((5,5)), np.ones((5,1))
-        C, D = np.ones((1,5)), np.zeros((1,1))
+        A, B = np.zeros((5, 5)), np.ones((5, 1))
+        C, D = np.ones((1, 5)), np.zeros((1, 1))
         sys = lss(A, B, C, D)
-        sys.x0 = np.ones((5,1))
+        sys.x0 = np.ones((5, 1))
         sys(2.0)
 
-        assert_array_equal(sys.x, np.ones((5,1)))
+        assert_array_equal(sys.x, np.ones((5, 1)))
 
     def testIdentity(self):
         N = 5
@@ -43,8 +44,8 @@ class testPod(unittest.TestCase):
         R = [0., 5., 5., 15., 10.]
         R = map(_number_to_array, R)
 
-        A, B = None, np.ones((5,1))
-        C, D = np.ones((1,5)), None
+        A, B = None, np.ones((5, 1))
+        C, D = np.ones((1, 5)), None
 
         sys = lss(A,B,C,D)
 
@@ -53,15 +54,15 @@ class testPod(unittest.TestCase):
             assert sys.t == T[i]
 
         sys.setupODE()
-        timeWithSteps = [list(np.linspace(t-1,t,2**t)) for t in T]
-        for i in range(1,N):
+        timeWithSteps = [list(np.linspace(t-1, t, 2**t)) for t in T]
+        for i in range(1, N):
             results = sys(timeWithSteps[i], U[i])
             self.assertAlmostEqual(results[-1], R[i])
             assert sys.t == timeWithSteps[i][-1]
 
         R = [r+u for r, u in zip(R, U)]
         R = map(np.array, R)
-        D = np.ones((1,1))
+        D = np.ones((1, 1))
 
         sys = lss(A, B, C, D)
 
@@ -111,10 +112,10 @@ class testPod(unittest.TestCase):
         C = np.array([[2., 1., 0.002]])
         D = None
 
-        sys = lss(A,B,C,D)
+        sys = lss(A, B, C, D)
 
         for reduction in lss.reduction_functions:
-            for k in [1,2]:
+            for k in [1, 2]:
                 rsys = lss(sys, reduction=reduction, k=k)
 
                 assert rsys.order == k
@@ -122,8 +123,8 @@ class testPod(unittest.TestCase):
                 assert rsys.outputs == 1
 
                 if hasattr(rsys, 'T'):
-                    assert rsys.T.shape == (3,k)
-                    assert rsys.Ti.shape == (k,3)
+                    assert rsys.T.shape == (3, k)
+                    assert rsys.Ti.shape == (k, 3)
     
                     assert_array_almost_equal(np.dot(rsys.Ti, rsys.T),
                                               np.eye(k))
@@ -144,12 +145,27 @@ class testExample2sys(unittest.TestCase):
             assert_array_equal(getattr(sys, matrix), getattr(sys2, matrix))
 
     def test_thermalRCNetwork(self):
-        C0, sys = thermalRCNetwork(1,1,100,3, lambda t, x=None: np.array([1.]))
+        u = lambda t, x=None: np.array([1.])
+        C0, sys = thermalRCNetwork(1e90, 1e87, 100, 3, u)
 
         assert sys.inputs == 1
         assert sys.outputs == 1
         assert sys.order == 99
 
+        self.assertAlmostEqual(sys.control(0.), np.array([1.0]))
+        self.assertAlmostEqual(sys.control(math.pi), np.array([1.0]))
+        self.assertAlmostEqual(sys.control(.5*math.pi), np.array([1.0]))
+
+        u = lambda t, x=None: np.array([math.sin(t)])
+        C0, sys = thermalRCNetwork(1e90, 1e87, 100, 3, u)
+
+        assert sys.inputs == 1
+        assert sys.outputs == 1
+        assert sys.order == 99
+
+        self.assertAlmostEqual(sys.control(0.), np.array([.0]))
+        self.assertAlmostEqual(sys.control(math.pi), np.array([.0]))
+        self.assertAlmostEqual(sys.control(.5*math.pi), np.array([1.0]))
 
 if __name__ == '__main__':
     unittest.main()

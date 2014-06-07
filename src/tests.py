@@ -19,8 +19,8 @@ def _number_to_array(s):
 class testPod(unittest.TestCase):
     """test lss functionalities"""
     def test_abcd_normalize(self):
-        A, B = np.zeros((5,5)), np.ones((5,1))
-        C, D = np.ones((1,5)), np.zeros((1,1))
+        A, B = np.zeros((5, 5)), np.ones((5, 1))
+        C, D = np.ones((1, 5)), np.zeros((1, 1))
         sys_without_D = lss(A, B, C, None)
         sys_without_A = lss(None, B, C, D)
 
@@ -70,8 +70,8 @@ class testPod(unittest.TestCase):
             self.assertAlmostEqual(sys(T[i], U[i]), R[i])
 
     def test_f(self):
-        A = [[ 1., 1.],
-             [ 0., 1.]]
+        A = [[1., 1.],
+             [0., 1.]]
         B = [[1.],
              [1.]]
         C = [[1., 1.]]

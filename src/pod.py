@@ -92,20 +92,24 @@ def truncation_square_root(A, B, C,
         equil = 'N'
 
     dico = 'C'
-    n = np.size(A,0)
-    m = np.size(B,1)
-    p = np.size(C,0)
+    n = np.size(A, 0)
+    m = np.size(B, 1)
+    p = np.size(C, 0)
     nr = k
 
     if not length_cache_array:
         length_cache_array = 5*n**2 + n*m + n*p + 10*n + m*p
 
-    return ab09ad(dico,job,equil,n,m,p,A,B,C,nr,tol,ldwork=length_cache_array)
+    return ab09ad(dico, job, equil,
+                  n, m, p,
+                  A, B, C,
+                  nr, tol,
+                  ldwork=length_cache_array)
 
-def truncation_square_root_trans_matrix(A,B,C,
-                                        k=None,tol=0.0,
+def truncation_square_root_trans_matrix(A, B, C,
+                                        k=None, tol=0.0,
                                         overwrite_a=True,
-                                        balance=True,check_stability=True,
+                                        balance=True, check_stability=True,
                                         length_cache_array=None):
     """Truncate the system and return transition matrices"""
 
@@ -119,13 +123,15 @@ def truncation_square_root_trans_matrix(A,B,C,
     T = TH.transpose().conj()
     B, C = np.dot(TH, B), np.dot(C, T)
 
-    nr,A,B,C,hsv,T_,Ti_ = \
-        truncation_square_root_schur(A,B,C,k=k,tol=tol,balance=balance,
+    nr, A, B, C, hsv, T_, Ti_ = \
+        truncation_square_root_schur(A, B, C,
+                                     k=k, tol=tol,
+                                     balance=balance,
                                      length_cache_array=length_cache_array)
 
-    T, Ti = np.dot(T,T_), np.dot(Ti_,TH)
+    T, Ti = np.dot(T, T_), np.dot(Ti_, TH)
 
-    return nr,A,B,C,hsv,T,Ti
+    return nr, A, B, C, hsv, T, Ti
 
 def truncation_square_root_schur(A,B,C,
                                  k=None,tol=0.0,
@@ -145,20 +151,24 @@ def truncation_square_root_schur(A,B,C,
         job = 'N'
 
     dico = 'C'
-    n = np.size(A,0)
-    m = np.size(B,1)
-    p = np.size(C,0)
+    n = np.size(A, 0)
+    m = np.size(B, 1)
+    p = np.size(C, 0)
     nr = k
 
     if not length_cache_array:
         length_cache_array = 5*n**2 + n*m + n*p + 10*n + m*p   
 
     nr,A,B,C,hsv,T_,Ti_ = \
-        ab09ax(dico,job,n,m,p,A,B,C,nr=nr,tol=tol,ldwork=length_cache_array)
+        ab09ax(dico, job,
+               n, m, p,
+               A, B, C,
+               nr=nr, tol=tol,
+               ldwork=length_cache_array)
 
-    return nr,A,B,C,hsv,T_,Ti_
+    return nr, A, B, C, hsv, T_, Ti_
 
-def controllability_truncation(A,B,C,k,check_stability=True):
+def controllability_truncation(A, B, C, k, check_stability=True):
     """Truncate the system based on the controllability Gramian
 
     Solves the Lyapunov Equation for ``AP + PA^H + B B^H`` and computes the
@@ -352,7 +362,7 @@ class lss(object):
 
         """
         self.state = ode(self.f, jac=lambda t, y, *f_args: self.A)
-        self.state.set_integrator(self.integrator,**self.integrator_options)
+        self.state.set_integrator(self.integrator, **self.integrator_options)
         if self.x0 is None:
             self.x0 = np.zeros((self.order,))
         self.state.set_initial_value(self.x0, self.t0)

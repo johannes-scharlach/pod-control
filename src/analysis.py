@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 import random
 import math
 import numpy as np
@@ -72,46 +72,46 @@ def optionPricingComparison(N=1000, k=None,
     if k is None:
         k = max(1,int(N/50))
 
-    print "SETUP\n===================="
-    print "original system"
+    print("SETUP\n====================")
+    print("original system")
     with Timer():
         sys = e2s.optionPricing(N=N, option=option, r=r, T=T, K=K, L=L)
 
-    print "auto truncated"
+    print("auto truncated")
     with Timer():
         sys_auto_truncated = \
             pod.lss(sys, reduction="truncation_square_root_trans_matrix")
         sys_auto_truncated.x0 = np.dot(sys_auto_truncated.Ti, sys.x0)
 
-    print "balanced truncated with k =", k
+    print("balanced truncated with k =", k)
     with Timer():
         sys_balanced_truncated = \
             pod.lss(sys, reduction="truncation_square_root_trans_matrix", k=k)
         sys_balanced_truncated.x0 = np.dot(sys_balanced_truncated.Ti, sys.x0)
 
-    print "controllability gramian reduction"
+    print("controllability gramian reduction")
     with Timer(): 
         sys_control_truncated = \
             pod.lss(sys, reduction="controllability_truncation", k=k)
         sys_control_truncated.x0 = np.dot(sys_control_truncated.Ti, sys.x0)
 
-    print "============\nEVALUATIONS\n==============="
+    print("============\nEVALUATIONS\n===============")
 
     timeSteps = list(np.linspace(0, 1, 100))
 
-    print "unreduced system"
+    print("unreduced system")
     with Timer():
         Y = sys(timeSteps)
 
-    print "system reduced with balanced truncation, auto sized"
+    print("system reduced with balanced truncation, auto sized")
     with Timer():
         Y_auto_truncated = sys_auto_truncated(timeSteps)
 
-    print 'system reduced with balanced truncation, k={}'.format(k)
+    print("system reduced with balanced truncation, k={}".format(k))
     with Timer():
         Y_balanced_truncated = sys_balanced_truncated(timeSteps)
 
-    print "system reduced with controllability gramian"
+    print("system reduced with controllability gramian")
     with Timer():
         Y_control_truncated = sys_control_truncated(timeSteps)
 
@@ -127,38 +127,44 @@ def optionPricingComparison(N=1000, k=None,
                              for y, yhat
                              in  zip(Y, Y_control_truncated)]
 
-    print "The original system has order ", sys.order
-    print "The auto-sized system has order ", sys_auto_truncated.order
-    print "and a total error of ", max(eps_auto_truncated)
-    print "The balanced and truncated system has order ", \
-        sys_balanced_truncated.order
-    print "and a total error of ", max(eps_balanced_truncated)
-    print "The control truncated system has order ", sys_control_truncated.order
-    print "and a total error of ", max(eps_control_truncated)
+    print("The original system has order ", sys.order)
+    print("The auto-sized system has order ", sys_auto_truncated.order)
+    print("and a total error of ", max(eps_auto_truncated))
+    print("The balanced and truncated system has order ",
+        sys_balanced_truncated.order)
+    print("and a total error of ", max(eps_balanced_truncated))
+    print("The control truncated system has order ", sys_control_truncated.order)
+    print("and a total error of ", max(eps_control_truncated))
 
     raise Exception
 
 def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
-                               T0=0., T=1., numberOfSteps=100):
+                               T0=0., T=1., numberOfSteps=100,
+                               integrator="dopri5",
+                               integrator_options={}):
     omega = .5/math.pi
     u = lambda t, x=None: np.array([math.sin(omega*t)])
 
-    print "===============\nSETUP\n==============="
+    print("===============\nSETUP\n===============")
 
     unred_sys = [{"name" : "Thermal RC Netwok with n = {}".format(n)},
                  {"name" : "Thermal RC Netwok with n = {}".format(k)}]
 
-    print unred_sys[0]["name"]
+    print(unred_sys[0]["name"])
     with Timer():
         C0, unred_sys[0]["sys"] = e2s.thermalRCNetwork(R, C, n, r, u)
+        unred_sys[0]["sys"].integrator = integrator
+        unred_sys[0]["sys"].integrator_options = integrator_options
 
-    print unred_sys[1]["name"]
+    print(unred_sys[1]["name"])
     with Timer():
         C0_2, unred_sys[1]["sys"] = e2s.thermalRCNetwork(R, C, k+1, r, u)
+        unred_sys[1]["sys"].integrator = integrator
+        unred_sys[1]["sys"].integrator_options = integrator_options
 
     sys = unred_sys[0]["sys"]
 
-    print "REDUCTIONS\n--------------"
+    print("REDUCTIONS\n--------------")
 
     red_sys = [{"name" : "auto truncated ab09ax",
                     "reduction" : "truncation_square_root_trans_matrix"},
@@ -176,13 +182,13 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
 
     red_sys = reduce(unred_sys[0]["sys"], red_sys)
 
-    print "===============\nEVALUATIONS\n==============="
+    print("===============\nEVALUATIONS\n===============")
 
     timeSteps = list(np.linspace(T0, T, numberOfSteps))
     systems = unred_sys + red_sys
 
     for system in systems:
-        print system["name"]
+        print(system["name"])
         with Timer():
             #system["Y"] = system["sys"](timeSteps)
             system["Y"] = []
@@ -190,19 +196,19 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
                 system["Y"].append(system["sys"](t))
 
 
-    print "===============\nERRORS\n==============="
+    print("===============\nERRORS\n===============")
 
     norm_order = np.inf
 
     Y = systems[0]["Y"]
 
     for system in systems[1:]:
-        print system["name"], "has order", system["sys"].order
+        print(system["name"], "has order", system["sys"].order)
         system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
                          for y, yhat in zip(Y, system["Y"])]
-        print "and a maximal error of", max(system["eps"])
+        print("and a maximal error of", max(system["eps"]))
 
-    print "==============\nPLOTS\n=============="
+    print("==============\nPLOTS\n==============")
 
     for system in systems:
         plot(timeSteps, system["Y"], label=system["name"])
@@ -211,7 +217,7 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
 
 def reduce(sys, red_sys):
     for system in red_sys:
-        print system["name"]
+        print(system["name"])
         with Timer():
             system["sys"] = \
                 pod.lss(sys,

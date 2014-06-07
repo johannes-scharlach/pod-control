@@ -41,7 +41,7 @@ def plotResults(Y, T, label=None, legend_loc='upper left', show_legend=False):
     
 def randomRuns(sys, rsys, T, sigma=10.0, integrator='dopri5'):
     timeSteps = range(1, T+1)
-    U = [np.array([random.gauss(0.,sigma)]) for t in timeSteps]
+    U = [np.array([random.gauss(0., sigma)]) for t in timeSteps]
 
     sys.setupODE(integrator=integrator)
     rsys.setupODE(integrator=integrator)
@@ -137,3 +137,85 @@ def optionPricingComparison(N=1000, k=None,
     print "and a total error of ", max(eps_control_truncated)
 
     raise Exception
+
+def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
+                               T0=0., T=1., numberOfSteps=100):
+    omega = .5/math.pi
+    u = lambda t, x=None: np.array([math.sin(omega*t)])
+
+    print "===============\nSETUP\n==============="
+
+    unred_sys = [{"name" : "Thermal RC Netwok with n = {}".format(n)},
+                 {"name" : "Thermal RC Netwok with n = {}".format(k)}]
+
+    print unred_sys[0]["name"]
+    with Timer():
+        C0, unred_sys[0]["sys"] = e2s.thermalRCNetwork(R, C, n, r, u)
+
+    print unred_sys[1]["name"]
+    with Timer():
+        C0_2, unred_sys[1]["sys"] = e2s.thermalRCNetwork(R, C, k+1, r, u)
+
+    sys = unred_sys[0]["sys"]
+
+    print "REDUCTIONS\n--------------"
+
+    red_sys = [{"name" : "auto truncated ab09ax",
+                    "reduction" : "truncation_square_root_trans_matrix"},
+               {"name" : "auto truncated ab09ad",
+                    "reduction" : "truncation_square_root"},
+               {"name" : "balanced truncated ab09ax with k = {}".format(k),
+                    "reduction" : "truncation_square_root_trans_matrix",
+                    "k" : k},
+               {"name" : "balanced truncated ab09ad with k = {}".format(k),
+                    "reduction" : "truncation_square_root",
+                    "k" : k},
+               {"name" : "controllability gramian reduction with k={}".format(k),
+                    "reduction" : "controllability_truncation",
+                    "k" : k}]
+
+    red_sys = reduce(unred_sys[0]["sys"], red_sys)
+
+    print "===============\nEVALUATIONS\n==============="
+
+    timeSteps = list(np.linspace(T0, T, numberOfSteps))
+    systems = unred_sys + red_sys
+
+    for system in systems:
+        print system["name"]
+        with Timer():
+            #system["Y"] = system["sys"](timeSteps)
+            system["Y"] = []
+            for t in timeSteps:
+                system["Y"].append(system["sys"](t))
+
+
+    print "===============\nERRORS\n==============="
+
+    norm_order = np.inf
+
+    Y = systems[0]["Y"]
+
+    for system in systems[1:]:
+        print system["name"], "has order", system["sys"].order
+        system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
+                         for y, yhat in zip(Y, system["Y"])]
+        print "and a maximal error of", max(system["eps"])
+
+    print "==============\nPLOTS\n=============="
+
+    for system in systems:
+        plot(timeSteps, system["Y"], label=system["name"])
+
+    legend()
+
+def reduce(sys, red_sys):
+    for system in red_sys:
+        print system["name"]
+        with Timer():
+            system["sys"] = \
+                pod.lss(sys,
+                        reduction=system.get("reduction", None),
+                        k=system.get("k", None))
+
+    return red_sys

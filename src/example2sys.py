@@ -36,9 +36,9 @@ def heatSystem(N, L=1.0, g0_scale=None, gN_scale=None):
     C = np.concatenate((np.zeros((1,N-1)), np.eye(N-1), np.zeros((1,N-1))))
     D = np.zeros((N+1,inputs))
     if g0_scale:
-        D[0][0] = 1
+        D[0][0] = g0_scale
     if gN_scale:
-        D[-1][-1] = 1
+        D[-1][-1] = gN_scale
 
     sys = pod.lss(A, B, C, D)
 

@@ -3,7 +3,7 @@ import random
 import math
 import numpy as np
 from scipy import linalg
-from matplotlib.pyplot import plot, subplot, legend
+from matplotlib.pyplot import plot, subplot, legend, figure
 import example2sys as e2s
 import pod
 import time
@@ -139,28 +139,20 @@ def optionPricingComparison(N=1000, k=None,
     raise Exception
 
 def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
-                               T0=0., T=1., numberOfSteps=100,
+                               T0=0., T=1., omega=math.pi, number_of_steps=100,
                                integrator="dopri5",
                                integrator_options={}):
-    omega = .5/math.pi
     u = lambda t, x=None: np.array([math.sin(omega*t)])
 
     print("===============\nSETUP\n===============")
 
-    unred_sys = [{"name" : "Thermal RC Netwok with n = {}".format(n)},
-                 {"name" : "Thermal RC Netwok with n = {}".format(k)}]
+    unred_sys = [{"name" : "Thermal RC Netwok with n = {}".format(n)}]
 
     print(unred_sys[0]["name"])
     with Timer():
         C0, unred_sys[0]["sys"] = e2s.thermalRCNetwork(R, C, n, r, u)
         unred_sys[0]["sys"].integrator = integrator
         unred_sys[0]["sys"].integrator_options = integrator_options
-
-    print(unred_sys[1]["name"])
-    with Timer():
-        C0_2, unred_sys[1]["sys"] = e2s.thermalRCNetwork(R, C, k+1, r, u)
-        unred_sys[1]["sys"].integrator = integrator
-        unred_sys[1]["sys"].integrator_options = integrator_options
 
     sys = unred_sys[0]["sys"]
 
@@ -184,16 +176,13 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
 
     print("===============\nEVALUATIONS\n===============")
 
-    timeSteps = list(np.linspace(T0, T, numberOfSteps))
+    timeSteps = list(np.linspace(T0, T, number_of_steps))
     systems = unred_sys + red_sys
 
     for system in systems:
         print(system["name"])
         with Timer():
-            #system["Y"] = system["sys"](timeSteps)
-            system["Y"] = []
-            for t in timeSteps:
-                system["Y"].append(system["sys"](t))
+            system["Y"] = system["sys"](timeSteps)
 
 
     print("===============\nERRORS\n===============")
@@ -202,7 +191,7 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
 
     Y = systems[0]["Y"]
 
-    for system in systems[1:]:
+    for system in systems:
         print(system["name"], "has order", system["sys"].order)
         system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
                          for y, yhat in zip(Y, system["Y"])]
@@ -210,10 +199,21 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
 
     print("==============\nPLOTS\n==============")
 
+    figure(1)
     for system in systems:
         plot(timeSteps, system["Y"], label=system["name"])
+    legend(loc="upper left")
 
-    legend()
+    figure(2)
+    for system in systems[1:4]:
+        subplot(1, 2, 1)
+        plot(timeSteps, system["eps"], label=system["name"])
+    legend(loc="upper left")
+    for system in systems[4:]:
+        subplot(1, 2, 2)
+        plot(timeSteps, system["eps"], label=system["name"])
+    legend(loc="upper left")
+
 
 def reduce(sys, red_sys):
     for system in red_sys:

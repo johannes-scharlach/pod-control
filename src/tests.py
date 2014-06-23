@@ -2,7 +2,7 @@
 
 """
 
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 import scipy as sp
 import math
@@ -113,9 +113,10 @@ class testPod(unittest.TestCase):
         D = None
 
         sys = lss(A, B, C, D)
+        sys.x0 = np.ones((3,))
 
         for reduction in lss.reduction_functions:
-            for k in [1, 2]:
+            for k in [1, 2, 3]:
                 rsys = lss(sys, reduction=reduction, k=k)
 
                 assert rsys.order == k
@@ -128,6 +129,8 @@ class testPod(unittest.TestCase):
     
                     assert_array_almost_equal(np.dot(rsys.Ti, rsys.T),
                                               np.eye(k))
+                    assert_array_almost_equal(np.dot(rsys.Ti, sys.x0),
+                                              rsys.x0)
 
 class testExample2sys(unittest.TestCase):
     """Test the example system generator"""

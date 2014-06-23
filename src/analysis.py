@@ -4,6 +4,7 @@ import math
 import numpy as np
 from scipy import linalg
 from matplotlib.pyplot import plot, subplot, legend, figure
+from mpl_toolkits.mplot3d import axes3d
 import example2sys as e2s
 import pod
 import time
@@ -68,75 +69,90 @@ class Timer(object):
         return False
 
 def optionPricingComparison(N=1000, k=None,
-                            option="put", r=0.05, T=1., K=100., L=None):
+                            option="put", r=0.05, T=1., K=100., L=None,
+                            integrator="dopri5", integrator_options={}):
     if k is None:
         k = max(1,int(N/50))
+    if L is None:
+        L = 10 * K
 
     print("SETUP\n====================")
-    print("original system")
-    with Timer():
-        sys = e2s.optionPricing(N=N, option=option, r=r, T=T, K=K, L=L)
 
-    print("auto truncated")
-    with Timer():
-        sys_auto_truncated = \
-            pod.lss(sys, reduction="truncation_square_root_trans_matrix")
-        sys_auto_truncated.x0 = np.dot(sys_auto_truncated.Ti, sys.x0)
+    unred_sys = [{"name" : ("Heat equation for {} option pricing" +
+                    " with n = {}").format(option,N)}]
 
-    print("balanced truncated with k =", k)
+    print(unred_sys[0]["name"])
     with Timer():
-        sys_balanced_truncated = \
-            pod.lss(sys, reduction="truncation_square_root_trans_matrix", k=k)
-        sys_balanced_truncated.x0 = np.dot(sys_balanced_truncated.Ti, sys.x0)
+        unred_sys[0]["sys"] = e2s.optionPricing(N=N, option=option,
+                                                r=r, T=T, K=K, L=L)
+        unred_sys[0]["sys"].integrator = integrator
+        unred_sys[0]["sys"].integrator_options = integrator_options
 
-    print("controllability gramian reduction")
-    with Timer(): 
-        sys_control_truncated = \
-            pod.lss(sys, reduction="controllability_truncation", k=k)
-        sys_control_truncated.x0 = np.dot(sys_control_truncated.Ti, sys.x0)
+    sys = unred_sys[0]["sys"]
+
+    print("REDUCTIONS\n--------------")
+
+    red_sys = [{"name" : "auto truncated ab09ax",
+                    "reduction" : "truncation_square_root_trans_matrix"},
+               {"name" : "balanced truncated ab09ax with k = {}".format(k),
+                    "reduction" : "truncation_square_root_trans_matrix",
+                    "k" : k},
+               {"name" : "controllability gramian reduction with k={}".format(k),
+                    "reduction" : "controllability_truncation",
+                    "k" : k}]
+
+    red_sys = reduce(unred_sys[0]["sys"], red_sys)
 
     print("============\nEVALUATIONS\n===============")
 
-    timeSteps = list(np.linspace(0, 1, 100))
+    timeSteps = list(np.linspace(0, T, 10))
+    systems = unred_sys + red_sys
 
-    print("unreduced system")
-    with Timer():
-        Y = sys(timeSteps)
-
-    print("system reduced with balanced truncation, auto sized")
-    with Timer():
-        Y_auto_truncated = sys_auto_truncated(timeSteps)
-
-    print("system reduced with balanced truncation, k={}".format(k))
-    with Timer():
-        Y_balanced_truncated = sys_balanced_truncated(timeSteps)
-
-    print("system reduced with controllability gramian")
-    with Timer():
-        Y_control_truncated = sys_control_truncated(timeSteps)
+    for system in systems:
+        print(system["name"])
+        with Timer():
+            system["Y"] = system["sys"](timeSteps)
+    
+    print("===============\nERRORS\n===============")
 
     norm_order = np.inf
 
-    eps_auto_truncated = [linalg.norm(y-yhat, ord=norm_order)
-                          for y, yhat
-                          in  zip(Y, Y_auto_truncated)]
-    eps_balanced_truncated = [linalg.norm(y-yhat, ord=norm_order)
-                              for y, yhat
-                              in  zip(Y, Y_balanced_truncated)]
-    eps_control_truncated = [linalg.norm(y-yhat, ord=norm_order)
-                             for y, yhat
-                             in  zip(Y, Y_control_truncated)]
+    Y = systems[0]["Y"]
 
-    print("The original system has order ", sys.order)
-    print("The auto-sized system has order ", sys_auto_truncated.order)
-    print("and a total error of ", max(eps_auto_truncated))
-    print("The balanced and truncated system has order ",
-        sys_balanced_truncated.order)
-    print("and a total error of ", max(eps_balanced_truncated))
-    print("The control truncated system has order ", sys_control_truncated.order)
-    print("and a total error of ", max(eps_control_truncated))
+    for system in systems:
+        print(system["name"], "has order", system["sys"].order)
+        system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
+                         for y, yhat in zip(Y, system["Y"])]
+        print("and a maximal error of", max(system["eps"]))
 
-    raise Exception
+    print("==============\nPLOTS\n==============")
+
+    fig = figure(1)
+    
+    N2 = int(1.5*K*N/L)
+    X, Y = [], []
+    for i in range(len(timeSteps)):
+        X.append([timeSteps[i] for _ in range(N2)])
+        Y.append([j*L/N for j in range(N2)])
+
+    for system in range(4):
+        ax = fig.add_subplot(221+system, projection='3d')
+
+        Z = []
+        for i in range(len(timeSteps)):
+            Z.append(list(systems[system]["Y"][i])[:N2])
+
+        ax.plot_surface(X, Y, Z)
+
+    figure(2)
+    for system in systems[1:3]:
+        subplot(1, 2, 1)
+        plot(timeSteps, system["eps"], label=system["name"])
+    legend(loc="upper left")
+    for system in systems[3:]:
+        subplot(1, 2, 2)
+        plot(timeSteps, system["eps"], label=system["name"])
+    legend(loc="upper left")
 
 def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
                                T0=0., T=1., omega=math.pi, number_of_steps=100,
@@ -153,8 +169,6 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
         C0, unred_sys[0]["sys"] = e2s.thermalRCNetwork(R, C, n, r, u)
         unred_sys[0]["sys"].integrator = integrator
         unred_sys[0]["sys"].integrator_options = integrator_options
-
-    sys = unred_sys[0]["sys"]
 
     print("REDUCTIONS\n--------------")
 

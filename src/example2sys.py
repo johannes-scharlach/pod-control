@@ -7,9 +7,67 @@ import random
 import scipy as sp
 import numpy as np
 
+def BLaC(x, delta=0.5):
+    xMod = math.fmod(x, 2)
+    return xMod/delta*(xMod<delta) + 1*(xMod>=delta)*(xMod<=2-delta) \
+            + (2-xMod)/delta*(xMod>2-delta)
+
+simple_functions = {"sin" : lambda x : math.sin(x),
+        "cos" : lambda x : math.cos(x),
+        "zero" : lambda x : 0.,
+        "one" : lambda x : 1.,
+        "identity" : lambda x : x,
+        "hat" : lambda x : (math.fmod(x+1, 2.)-1) * \
+                (1-2*(math.fmod(x+1, 4.)>2)),
+        "BLaC" : BLaC}
+
 def example2sys(filename):
     data = scipy.io.loadmat('example_data/' + filename)
     return pod.lss(data['A'], data['B'], data['C'], data['D'])
+
+def heatSystemA(sizes, h2):
+    """Build matrix A for a heat equation"""
+    if len(sizes) != 1:
+        raise NotImplementedError("dimensions other than 1 not yet implemented")
+    N = sizes[0]
+    h2 = h2[0]
+    main_diagonal = np.ones(N-1) * (-2 / h2)
+    secondary_diagonal = np.ones(N-2) / h2
+
+    return np.diag(main_diagonal) + np.diag(secondary_diagonal, 1) + \
+            np.diag(secondary_diagonal, -1)
+
+def controllableHeatSystem(N, L=1., control="sin"):
+    if N % 2:
+        raise ValueError("N-1 has to be odd, to control the middle")
+
+    scale = 0.0007
+    input_scale = scale * 120
+
+    h2 = (L/N)**2
+
+    A = heatSystemA([N], [h2])
+
+    B = np.zeros((N-1, 1))
+    B[N/2-1][0] = input_scale
+
+    C = np.concatenate((np.zeros((1, N-1)), np.eye(N-1), np.zeros((1, N-1))))
+    # C = np.zeros((5, N-1))
+    # C[1][1*N/4-1] = 1.
+    # C[2][2*N/4-1] = 1.
+    # C[3][3*N/4-1] = 1.
+
+    D = None
+
+    x0 = np.array([min(i+1, N-1-i) * scale / (N/2) for i in range(N-1)])
+    x0 = None
+
+    sys = pod.lss(A, B, C, D)
+
+    sys.x0 = x0
+    sys.control = lambda t, x=None: np.array([simple_functions[control](t)])
+
+    return sys
 
 def heatSystem(N, L=1.0, g0_scale=None, gN_scale=None):
     """Generate a state space system that solves the heat equation.
@@ -23,18 +81,16 @@ def heatSystem(N, L=1.0, g0_scale=None, gN_scale=None):
     inputs = (g0_scale is not None) + (gN_scale is not None)
 
     h2 = (L/N)**2
-    main_diagonal = np.ones(N-1) * (-2 * h2)
-    secondary_diagonal = np.ones(N-2) * h2
+    
+    A = heatSystemA([N], [h2])
 
-    A = np.diag(main_diagonal) + np.diag(secondary_diagonal, 1) + \
-            np.diag(secondary_diagonal, -1)
-    B = np.zeros((N-1,inputs))
+    B = np.zeros((N-1, inputs))
     if g0_scale:
-        B[0][0] = h2 * g0_scale
+        B[0][0] = 1 / h2 * g0_scale
     if gN_scale:
-        B[-1][-1] = h2 * gN_scale
-    C = np.concatenate((np.zeros((1,N-1)), np.eye(N-1), np.zeros((1,N-1))))
-    D = np.zeros((N+1,inputs))
+        B[-1][-1] = 1 / h2 * gN_scale
+    C = np.concatenate((np.zeros((1, N-1)), np.eye(N-1), np.zeros((1, N-1))))
+    D = np.zeros((N+1, inputs))
     if g0_scale:
         D[0][0] = g0_scale
     if gN_scale:

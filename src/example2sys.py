@@ -110,14 +110,14 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
 
     if option is "put":
         def boundary_conditions(t, y=None):
-            a = math.e**(-r*(-t))
+            a = math.e**(-r*(t))
             return np.array([a])
         g0_scale = K
         gN_scale = None
         x0 = [max(K-h*i, 0) for i in range(1,N)]
     elif option is "call":
         def boundary_conditions(t, y=None):
-            b = 1 - math.e**(-r*(-t))*K/L
+            b = 1 - math.e**(-r*(t))*K/L
             return np.array([b])
         g0_scale = None
         gN_scale = L

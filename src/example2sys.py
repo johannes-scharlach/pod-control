@@ -104,23 +104,31 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
     """Generate a State-Space System for the heat eqation for option pricing
 
     """
+
+    scaled = True
+
     if not L:
         L = 10 * K
     h = L/N
 
+    g0_scale = 1
+    gN_scale = 1
+
     if option is "put":
         def boundary_conditions(t, y=None):
-            a = math.e**(-r*(t))
+            a = math.e**(-r*(t)) * (1 * scaled + (not scaled) * K)
             return np.array([a])
-        g0_scale = K
-        gN_scale = None
+        if scaled:
+            g0_scale = K
+            gN_scale = None
         x0 = [max(K-h*i, 0) for i in range(1,N)]
     elif option is "call":
         def boundary_conditions(t, y=None):
-            b = 1 - math.e**(-r*(t))*K/L
+            b = 1 - math.e**(-r*(t))*K * (1 * (not scaled) + scaled / L)
             return np.array([b])
-        g0_scale = None
-        gN_scale = L
+        if scaled:
+            g0_scale = None
+            gN_scale = L
         x0 = [max(h*i-K, 0) for i in range(1,N)]
     else:
         raise ValueError("No such option aviable")

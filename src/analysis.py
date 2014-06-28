@@ -4,6 +4,7 @@ import math
 import numpy as np
 from scipy import linalg
 from matplotlib.pyplot import plot, subplot, legend, figure
+from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
 import example2sys as e2s
 import pod
@@ -67,6 +68,94 @@ class Timer(object):
         self.elapsed = end - self.start
         print('Time elapsed {} seconds'.format(self.elapsed))
         return False
+
+def controllableHeatSystemComparison(N=1000, k=None,
+                            r=0.05, T=1., K=100., L=1.,
+                            control="sin",
+                            integrator="dopri5", integrator_options={}):
+    if k is None:
+        k = max(1,int(N/50))
+
+    print("SETUP\n====================")
+
+    unred_sys = [{"name" : "Controllable heat equation"}]
+
+    print(unred_sys[0]["name"])
+    with Timer():
+        unred_sys[0]["sys"] = e2s.controllableHeatSystem(N=N, L=L,
+                                                         control=control)
+        unred_sys[0]["sys"].integrator = integrator
+        unred_sys[0]["sys"].integrator_options = integrator_options
+
+    sys = unred_sys[0]["sys"]
+
+    print("REDUCTIONS\n--------------")
+
+    red_sys = [{"name" : "auto truncated ab09ax",
+                    "reduction" : "truncation_square_root_trans_matrix"},
+               {"name" : "balanced truncated ab09ax with k = {}".format(k),
+                    "reduction" : "truncation_square_root_trans_matrix",
+                    "k" : k},
+               {"name" : "controllability gramian reduction with k={}".format(k),
+                    "reduction" : "controllability_truncation",
+                    "k" : k}]
+
+    if sys.x0 is None:
+        red_sys += [{"name" : "auto truncated ab09ad",
+                        "reduction" : "truncation_square_root"},
+                    {"name" : "balanced truncated ab09ad with k = {}".format(k),
+                        "reduction" : "truncation_square_root",
+                        "k" : k}]
+
+    red_sys = reduce(unred_sys[0]["sys"], red_sys)
+
+    print("============\nEVALUATIONS\n===============")
+
+    timeSteps = list(np.linspace(0, T, 100))
+    systems = unred_sys + red_sys
+
+    for system in systems:
+        print(system["name"])
+        with Timer():
+            system["Y"] = system["sys"](timeSteps)
+    
+    print("===============\nERRORS\n===============")
+
+    norm_order = np.inf
+
+    Y = systems[0]["Y"]
+
+    for system in systems:
+        print(system["name"], "has order", system["sys"].order)
+        system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
+                         for y, yhat in zip(Y, system["Y"])]
+        print("and a maximal error of", max(system["eps"]))
+
+    print("==============\nPLOTS\n==============")
+
+    fig = figure(1)
+
+    number_of_outputs = len(Y[0])
+    
+    X, Y = [], []
+    for i in range(len(timeSteps)):
+        X.append([timeSteps[i] for _ in range(number_of_outputs)])
+        Y.append([j*L/(number_of_outputs-1) for j in range(number_of_outputs)])
+
+    for system in range(len(systems)):
+        ax = fig.add_subplot(221+system+10*(len(systems)>4), projection='3d')
+
+        Z = []
+        for i in range(len(timeSteps)):
+            Z.append(list(systems[system]["Y"][i]))
+
+        ax.plot_surface(X, Y, Z, rstride=10, cstride=1, cmap=cm.coolwarm,
+                        linewidth=0, antialiased=False)
+
+    figure(2)
+    for system in systems[1:]:
+        plot(timeSteps, system["eps"], label=system["name"])
+    legend(loc="upper left")
 
 def optionPricingComparison(N=1000, k=None,
                             option="put", r=0.05, T=1., K=100., L=None,

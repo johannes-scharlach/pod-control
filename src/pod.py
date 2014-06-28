@@ -4,7 +4,7 @@ applied when creating a system.
 
 """
 
-from __future__ import division
+from __future__ import division, print_function
 
 import collections
 import numpy as np
@@ -108,19 +108,19 @@ def truncation_square_root(A, B, C,
 
 def truncation_square_root_trans_matrix(A, B, C,
                                         k=None, tol=0.0,
-                                        overwrite_a=True,
+                                        overwrite_a=False,
                                         balance=True, check_stability=True,
                                         length_cache_array=None):
     """Truncate the system and return transition matrices"""
 
-    A, TH, sdim = linalg.schur(A, sort='lhp', overwrite_a=overwrite_a)
+    A, T, sdim = linalg.schur(A, sort='lhp', overwrite_a=overwrite_a)
 
     if sdim < A.shape[0]:
         raise ValueError("This is not a stable system. \n" +
                          "The eigenvalues are not all in the left half of " +
                          "the complex plane.")
 
-    T = TH.transpose().conj()
+    TH = T.transpose().conj()
     B, C = np.dot(TH, B), np.dot(C, T)
 
     nr, A, B, C, hsv, T_, Ti_ = \
@@ -300,10 +300,10 @@ class lss(object):
             if len(reduction_output) == 7:
                 self.T, self.Ti = reduction_output[-2:]
                 if self.x0 is not None:
-                    if (self.x0 != 0).any():
-                        self.x0 = np.dot(self.Ti, self.x0)
-                    else:
+                    if (self.x0 == 0).all():
                         self.x0 = np.zeros((self.order,))
+                    else:
+                        self.x0 = np.dot(self.Ti, self.x0)
 
         self.state = None
 

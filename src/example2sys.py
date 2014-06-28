@@ -117,7 +117,7 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
     if option is "put":
         def boundary_conditions(t, y=None):
             a = math.e**(-r*(t)) * (1 * scaled + (not scaled) * K)
-            return np.array([a])
+            return np.array([a]) if scaled else np.array([a, 0.])
         if scaled:
             g0_scale = K
             gN_scale = None
@@ -125,7 +125,7 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
     elif option is "call":
         def boundary_conditions(t, y=None):
             b = 1 - math.e**(-r*(t))*K * (1 * (not scaled) + scaled / L)
-            return np.array([b])
+            return np.array([b]) if scaled else np.array([0., b])
         if scaled:
             g0_scale = None
             gN_scale = L

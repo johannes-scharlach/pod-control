@@ -134,15 +134,6 @@ class testPod(unittest.TestCase):
 
 class testExample2sys(unittest.TestCase):
     """Test the example system generator"""
-    def test_controllableHeatSystem(self):
-        N = 4
-
-        sys = controllableHeatSystem(N)
-
-        assert_array_equal(sys.x0, np.array([50., 100., 50.]))
-
-
-
     def test_rcLadder(self):
         resistors = [1.0, 1.0, 1.0]
         capacitors = [1.0, 1.0, 1.0]

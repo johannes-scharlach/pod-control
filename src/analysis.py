@@ -70,7 +70,7 @@ class Timer(object):
         return False
 
 def controllableHeatSystemComparison(N=1000, k=None,
-                            r=0.05, T=1., K=100., L=1.,
+                            r=0.05, T=1., L=1.,
                             control="sin",
                             integrator="dopri5", integrator_options={}):
     if k is None:
@@ -142,15 +142,22 @@ def controllableHeatSystemComparison(N=1000, k=None,
         X.append([timeSteps[i] for _ in range(number_of_outputs)])
         Y.append([j*L/(number_of_outputs-1) for j in range(number_of_outputs)])
 
+    axes = []
+
     for system in range(len(systems)):
-        ax = fig.add_subplot(221+system+10*(len(systems)>4), projection='3d')
+        axes.append(fig.add_subplot(221+system+10*(len(systems)>4),
+                                  projection='3d'))
 
         Z = []
         for i in range(len(timeSteps)):
             Z.append(list(systems[system]["Y"][i]))
 
-        ax.plot_surface(X, Y, Z, rstride=10, cstride=1, cmap=cm.coolwarm,
+        axes[-1].plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
                         linewidth=0, antialiased=False)
+        axes[-1].set_title(systems[system]["name"])
+        axes[-1].set_xlabel("t")
+        axes[-1].set_ylabel("l")
+        axes[-1].set_zlabel("temperature")
 
     figure(2)
     for system in systems[1:]:
@@ -158,12 +165,12 @@ def controllableHeatSystemComparison(N=1000, k=None,
     legend(loc="upper left")
 
 def optionPricingComparison(N=1000, k=None,
-                            option="put", r=0.05, T=1., K=100., L=None,
+                            option="put", r=0.05, T=1., K=10., L=None,
                             integrator="dopri5", integrator_options={}):
     if k is None:
         k = max(1,int(N/50))
     if L is None:
-        L = 10 * K
+        L = 3 * K
 
     print("SETUP\n====================")
 
@@ -194,7 +201,7 @@ def optionPricingComparison(N=1000, k=None,
 
     print("============\nEVALUATIONS\n===============")
 
-    timeSteps = list(np.linspace(0, T, 10))
+    timeSteps = list(np.linspace(0, T, 30))
     systems = unred_sys + red_sys
 
     for system in systems:
@@ -210,8 +217,8 @@ def optionPricingComparison(N=1000, k=None,
 
     for system in systems:
         print(system["name"], "has order", system["sys"].order)
-        system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
-                         for y, yhat in zip(Y, system["Y"])]
+        system["eps"] = [0.] + [linalg.norm(y-yhat, ord=norm_order)
+                                for y, yhat in zip(Y[1:], system["Y"][1:])]
         print("and a maximal error of", max(system["eps"]))
 
     print("==============\nPLOTS\n==============")
@@ -224,22 +231,33 @@ def optionPricingComparison(N=1000, k=None,
         X.append([timeSteps[i] for _ in range(N2)])
         Y.append([j*L/N for j in range(N2)])
 
+    font_options = {"family" : "serif",
+                    "size" : "small",
+                    "stretch" : "condensed",
+                    "weight" : "light"}
+
+    axes = []
+
     for system in range(4):
-        ax = fig.add_subplot(221+system, projection='3d')
+        axes.append(fig.add_subplot(221+system, projection='3d'))
 
         Z = []
         for i in range(len(timeSteps)):
             Z.append(list(systems[system]["Y"][i])[:N2])
 
-        ax.plot_surface(X, Y, Z)
+        axes[-1].plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
+                        linewidth=0, antialiased=False)
+        axes[-1].set_title(systems[system]["name"], **font_options)
+        axes[-1].set_xlabel("-t", **font_options)
+        axes[-1].set_ylabel("K", **font_options)
+        axes[-1].set_zlabel("Lambda(K)", **font_options)
+
+    for ax in axes:
+        ax.azim = 26
+    fig.savefig("../plots/{}_option_azim_{}.png".format(option, axes[0].azim))
 
     figure(2)
-    for system in systems[1:3]:
-        subplot(1, 2, 1)
-        plot(timeSteps, system["eps"], label=system["name"])
-    legend(loc="upper left")
-    for system in systems[3:]:
-        subplot(1, 2, 2)
+    for system in systems[1:]:
         plot(timeSteps, system["eps"], label=system["name"])
     legend(loc="upper left")
 

@@ -6,6 +6,7 @@ from matplotlib.pyplot import plot, subplot, legend, figure
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 import example2sys as e2s
+import analysis
 
 
 def optionPricingScript():
@@ -349,4 +350,12 @@ def controllableHeatSystemPlot():
 
     plt.show()
 
-controllableHeatSystemPlot()
+
+analysis.controllableHeatSystemComparison(control="sin", T=4.)
+analysis.controllableHeatSystemComparison(control="hat", T=1.)
+analysis.controllableHeatSystemComparison(control="hat", T=4.)
+analysis.controllableHeatSystemComparison(control="BLaC", T=1.)
+analysis.controllableHeatSystemComparison(control="BLaC", T=4.)
+analysis.controllableHeatSystemComparison(control="one", T=.1)
+analysis.controllableHeatSystemComparison(control="identity", T=.1)
+analysis.controllableHeatSystemComparison(control="identity", T=4.)

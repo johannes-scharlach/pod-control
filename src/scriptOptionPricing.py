@@ -21,6 +21,9 @@ K = 10.5
 r = 0.05
 option = "put"
 
+font_options = {}
+
+
 print("SETUP\n====================")
 
 unred_sys = [{"name" : ("Heat equation for {} option pricing" +
@@ -91,10 +94,10 @@ for system in range(4):
 
     axes[-1].plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
                     linewidth=0, antialiased=False)
-    axes[-1].set_title(systems[system]["name"])
-    axes[-1].set_xlabel("-t")
-    axes[-1].set_ylabel("K")
-    axes[-1].set_zlabel("Lambda(K)")
+    axes[-1].set_title(systems[system]["name"], **font_options)
+    axes[-1].set_xlabel("-t", **font_options)
+    axes[-1].set_ylabel("K", **font_options)
+    axes[-1].set_zlabel("Lambda(K)", **font_options)
 
 for ax in axes:
     ax.azim = 26

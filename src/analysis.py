@@ -10,9 +10,11 @@ import example2sys as e2s
 import pod
 import time
 
+font_options = {}
+
 def runAnalysis(n, k, N=1, example='butter', T=20, sigma=1., integrator='dopri5'):
     sys = e2s.example2sys(example + '_' + str(n) + '.mat')
-    rsys = sys.truncate(k)
+    rsys = pod.lss(sys, reduction="controllability_truncation", k=k)
 
     results = []
     reducedResults = []
@@ -45,15 +47,22 @@ def randomRuns(sys, rsys, T, sigma=10.0, integrator='dopri5'):
     timeSteps = range(1, T+1)
     U = [np.array([random.gauss(0., sigma)]) for t in timeSteps]
 
-    sys.setupODE(integrator=integrator)
-    rsys.setupODE(integrator=integrator)
+    sys.integrator = integrator
+    rsys.integrator = integrator
+
+    sys.setupODE()
+    rsys.setupODE()
 
     print('System of order {}'.format(sys.order))
     with Timer():
-        Y = sys(timeSteps, U)
+        Y = []
+        for t, u in zip(timeSteps, U):
+            Y.append(sys(t,u))
     print('System of order {}'.format(rsys.order))
     with Timer():
-        Yhat = rsys(timeSteps, U)
+        Yhat = []
+        for t, u in zip(timeSteps, U):
+            Yhat.append(sys(t, u))
 
     return Y, Yhat, U
 
@@ -133,7 +142,7 @@ def controllableHeatSystemComparison(N=1000, k=None,
 
     print("==============\nPLOTS\n==============")
 
-    fig = figure(1)
+    fig = figure()
 
     number_of_outputs = len(Y[0])
     
@@ -158,6 +167,12 @@ def controllableHeatSystemComparison(N=1000, k=None,
         axes[-1].set_xlabel("t")
         axes[-1].set_ylabel("l")
         axes[-1].set_zlabel("temperature")
+
+
+    for ii in xrange(360, 0, -10):
+        for ax in axes:
+            ax.azim = ii
+        fig.savefig("../plots/controllable_heat_{}_t{:.2f}_azim_{}.png".format(control, T, axes[0].azim))
 
     figure(2)
     for system in systems[1:]:
@@ -231,10 +246,6 @@ def optionPricingComparison(N=1000, k=None,
         X.append([timeSteps[i] for _ in range(N2)])
         Y.append([j*L/N for j in range(N2)])
 
-    font_options = {"family" : "serif",
-                    "size" : "small",
-                    "stretch" : "condensed",
-                    "weight" : "light"}
 
     axes = []
 

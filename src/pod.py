@@ -111,7 +111,65 @@ def truncation_square_root_trans_matrix(A, B, C,
                                         overwrite_a=False,
                                         balance=True, check_stability=True,
                                         length_cache_array=None):
-    """Truncate the system and return transition matrices"""
+    """Truncate the system and return transition matrices
+
+    This allows to reduce a linear state space system by either specifying it
+    to a certain number of states `k` or by specifying a error tolerance `tol`
+    relative to the input. In theory the most accurate results are achieved by
+    using `balance` and `scale` but the size of the error strongly depends on
+    the particular problem and scaling and balancing may in some cases cost
+    too much.
+
+    Parameters
+    ----------
+    A : array_like
+    B : array_like
+    C : array_like
+        State-Space matrices of the system that should be reduced
+    k : int, optional
+        Order of the output system
+    tol : float, optional
+        Error of the output system, based on the Hankel Singular Values
+    balance : Boolean, optional
+        Balance the system before reducing it to make sure, that the error
+        is kept small
+    scale : Boolean, optional
+        Scale the system
+    check_stability : Boolean, optional
+        Checks if all the real parts of the eigenvalues of A are in the left
+        half of the complex plane.
+
+    Returns
+    -------
+    Nr : int
+        Actual size of the system, based on the error: If the Machine error
+        would have been bigger than the error of the reduced system, it may
+        happen that ``Nr < k`` and if the error would be inconsiderably bad,
+        It might be the case that ``Nr > k``. In case `k` was never specified,
+        this is purely based on `tol`
+    Ar, Br, Cr : ndarray
+        Reduced arrays
+    hsv : ndarray
+        Hankel singular values of the original system. The size of the error
+        may be calculated based on this.
+    T : ndarray
+        Transformation matrix
+    Ti : ndarray
+        Inverse of the transformation matrix
+
+    Raises
+    ------
+    ValueError
+        If the system that's provided is not stable (i.e. `A` has eigenvalues
+        which have non-negative real parts)
+    ImportError
+        If the slycot subroutine `ab09ad` can't be found. Occurs if the
+        slycot package is not installed.
+
+    Notes
+    -----
+    see truncation_square_root
+    """
 
     A, T, sdim = linalg.schur(A, sort='lhp', overwrite_a=overwrite_a)
 
@@ -138,6 +196,10 @@ def truncation_square_root_schur(A,B,C,
                                  balance=True,
                                  length_cache_array=None):
     """Use balanced truncation on a system with A in real Schur form
+
+    Notes
+    -----
+    see truncation_square_root_trans_matrix
 
     """
     try:
@@ -195,7 +257,11 @@ def controllability_truncation(A, B, C, k, check_stability=True):
     Ar, Br, Cr : ndarray
         Reduced arrays
     Lambdak : ndarray
-        largest k eigenvalues of the Gramian.
+        Largest k eigenvalues of the Gramian.
+    Uk : ndarray
+        Transformation matrix
+    UkH : ndarray
+        Hermetian of the transformation matrix
     """
     if check_stability and not isStable(A):
         raise ValueError("This doesn't seem to be a stable system!")
@@ -309,14 +375,17 @@ class lss(object):
 
     @property
     def order(self):
+        """Order of the system."""
         return self.A.shape[0]
 
     @property
     def inputs(self):
+        """Number of inputs of the system."""
         return self.B.shape[1]
 
     @property
     def outputs(self):
+        """Number of outputs of the system."""
         return self.C.shape[0]
 
     @property

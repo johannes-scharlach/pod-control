@@ -230,6 +230,31 @@ def truncation_square_root_schur(A,B,C,
 
     return nr, A, B, C, hsv, T_, Ti_
 
+def inoptimal_truncation_square_root(A, B, C, k):
+    AH = A.transpose().conj()
+    P = linalg.solve_lyapunov(A, -np.dot(B, B.transpose().conj()))
+    Q = linalg.solve_lyapunov(AH, -np.dot(C.transpose().conj(), C))
+
+    U = linalg.cholesky(P).transpose().conj()
+    L = linalg.cholesky(Q)
+
+    W, Sigma, V = linalg.svd(np.dot(U.transpose().conj()), full_matrices=false,
+                             overwrite_a=True, check_finite=False)
+
+    W1 = W[:, :k]
+    Sigma1 = Sigma[:k]
+    V1 = V[:, :k]
+
+    Sigma1_pow_neg_half = np.diag(Sigma1**-.5)
+
+    T1 = np.dot(Sigma1_pow_neg_half,
+                np.dot(V1.transpose().conj(), L.transpose().conj()))
+    Ti1 = np.dot(np.dot(U, W1),
+                 Sigma1_pow_neg_half)
+
+    return k, np.dot(T1, np.dot(A, Ti1)), np.dot(T1, B), np.dot(C, Ti1), \
+            Sigma, T1, Ti1
+
 def controllability_truncation(A, B, C, k, check_stability=True):
     """Truncate the system based on the controllability Gramian
 
@@ -332,7 +357,8 @@ class lss(object):
         'controllability_truncation' : controllability_truncation,
         'truncation_square_root_trans_matrix' : \
             truncation_square_root_trans_matrix,
-        'truncation_square_root_schur' : truncation_square_root_schur}
+        'truncation_square_root_schur' : truncation_square_root_schur,
+        'inoptimal_truncation_square_root' : inoptimal_truncation_square_root}
 
     def __init__(self, *create_from, **reduction_options):
         """Initialize a linear state space system

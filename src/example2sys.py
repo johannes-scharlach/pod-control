@@ -19,7 +19,8 @@ simple_functions = {"sin" : lambda x : math.sin(x),
         "identity" : lambda x : x,
         "hat" : lambda x : (math.fmod(x+1, 2.)-1) * \
                 (1-2*(math.fmod(x+1, 4.)>2)),
-        "BLaC" : BLaC}
+        "BLaC" : BLaC,
+        "BLaCsteep" : lambda x : BLaC(x, delta=0.1)}
 
 def example2sys(filename):
     data = scipy.io.loadmat('example_data/' + filename)
@@ -189,16 +190,22 @@ def rcLadder(resistors, capacitors, input_scale=1., outputs=[-1]):
     return pod.lss(A,B,C,D)
 
 def thermalRCNetwork(R, C, n, r, u, input_scale=1.):
-    capacitors = [(r-1)*(i+1)/(r**n-1)*C for i in range(n)]
-    resistors = [2 + r] + [r**i + r**(i+1)*(i+1<n) for i in range(1,n)]
-    resistors = np.array(resistors) * ((r-1)/(r**n-1)*.5*R)
-    resistors = list(resistors)
+    capacitors = _thermalRCNetworkCapacitors(C, n, r)
+    resistors = _thermalRCNetworkResistors(R, n, r)
 
-    sys = rcLadder(resistors, capacitors[1:], outputs=[0])
+    sys = rcLadder(resistors, capacitors[1:], outputs=[0], input_scale=input_scale)
 
     sys.control = u
 
     return capacitors[0], sys
+
+def _thermalRCNetworkCapacitors(C, n, r):
+    return [(r-1)*(i+1)/(r**n-1)*C for i in range(n)]
+
+def _thermalRCNetworkResistors(R, n, r):
+    resistors = [2 + r] + [r**i + r**(i+1)*(i+1<n) for i in range(1,n)]
+    resistors = np.array(resistors) * ((r-1)/(r**n-1)*.5*R)
+    return list(resistors)
 
 def _neg(x):
     if x<0.:

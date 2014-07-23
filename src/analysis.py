@@ -105,6 +105,9 @@ def controllableHeatSystemComparison(N=1000, k=None,
                {"name" : "balanced truncated ab09ax with k = {}".format(k),
                     "reduction" : "truncation_square_root_trans_matrix",
                     "k" : k},
+               {"name" : "balanced truncated in Python with k = {}".format(k),
+                    "reduction" : "inoptimal_truncation_square_root",
+                    "k" : k},
                {"name" : "controllability gramian reduction with k={}".format(k),
                     "reduction" : "controllability_truncation",
                     "k" : k}]
@@ -272,11 +275,12 @@ def optionPricingComparison(N=1000, k=None,
         plot(timeSteps, system["eps"], label=system["name"])
     legend(loc="upper left")
 
-def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
+def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, k2=28, r=3,
                                T0=0., T=1., omega=math.pi, number_of_steps=100,
+                               control="sin", input_scale=1.,
                                integrator="dopri5",
                                integrator_options={}):
-    u = lambda t, x=None: np.array([math.sin(omega*t)])
+    u = lambda t, x=None: np.array([e2s.simple_functions[control](omega*t)])
 
     print("===============\nSETUP\n===============")
 
@@ -284,7 +288,7 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
 
     print(unred_sys[0]["name"])
     with Timer():
-        C0, unred_sys[0]["sys"] = e2s.thermalRCNetwork(R, C, n, r, u)
+        C0, unred_sys[0]["sys"] = e2s.thermalRCNetwork(R, C, n, r, u, input_scale=input_scale)
         unred_sys[0]["sys"].integrator = integrator
         unred_sys[0]["sys"].integrator_options = integrator_options
 
@@ -294,6 +298,9 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
                     "reduction" : "truncation_square_root_trans_matrix"},
                {"name" : "auto truncated ab09ad",
                     "reduction" : "truncation_square_root"},
+               {"name" : "controllability gramian reduction with k={}".format(k2),
+                    "reduction" : "controllability_truncation",
+                    "k" : k2},
                {"name" : "balanced truncated ab09ax with k = {}".format(k),
                     "reduction" : "truncation_square_root_trans_matrix",
                     "k" : k},
@@ -334,7 +341,7 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, r=3,
     figure(1)
     for system in systems:
         plot(timeSteps, system["Y"], label=system["name"])
-    legend(loc="upper left")
+    legend(loc="lower right")
 
     figure(2)
     for system in systems[1:4]:

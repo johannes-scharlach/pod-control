@@ -2,9 +2,9 @@ from __future__ import division
 import math
 
 import scipy.io
+import scipy.sparse
 import pod
 import random
-import scipy as sp
 import numpy as np
 
 def BLaC(x, delta=0.5):
@@ -22,9 +22,20 @@ simple_functions = {"sin" : lambda x : math.sin(x),
         "BLaC" : BLaC,
         "BLaCsteep" : lambda x : BLaC(x, delta=0.1)}
 
+def _todense(A):
+    if scipy.sparse.issparse(A):
+        return A.toarray()
+    elif A is None:
+        return None
+    return np.asanyarray(A)
+
 def example2sys(filename):
     data = scipy.io.loadmat('example_data/' + filename)
-    return pod.lss(data['A'], data['B'], data['C'], data['D'])
+    A = data['A']
+    B = data['B']
+    C = data.get('C', B.transpose())
+    D = data.get('D', None)
+    return pod.lss(*map(_todense, [A, B, C, D]))
 
 def heatSystemA(sizes, h2):
     """Build matrix A for a heat equation"""

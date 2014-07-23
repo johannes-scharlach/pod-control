@@ -27,7 +27,7 @@ font_options = {}
 print("SETUP\n====================")
 
 unred_sys = [{"name" : ("Heat equation for {} option pricing" +
-                " with n = {}").format(option,N)}]
+                " with n = {}").format(option, N)}]
 
 print(unred_sys[0]["name"])
 with Timer():

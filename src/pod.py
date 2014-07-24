@@ -459,8 +459,10 @@ class lss(object):
         self.state = ode(self.f, jac=lambda t, y, *f_args: self.A)
         self.state.set_integrator(self.integrator, **self.integrator_options)
         if self.x0 is None:
-            self.x0 = np.zeros((self.order,))
-        self.state.set_initial_value(self.x0, self.t0)
+            x0 = np.zeros((self.order,))
+        else:
+            x0 = self.x0
+        self.state.set_initial_value(x0, self.t0)
         self.state.set_f_params(self.control)
 
     def __call__(self, times, control=None, force_ode_reset=False):

@@ -16,4 +16,4 @@
 *.pyc
 docs/_build/
 plots/
-"plots copy/"
+plots copy/

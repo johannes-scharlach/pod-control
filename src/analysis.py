@@ -79,7 +79,8 @@ class Timer(object):
         return False
 
 def controllableHeatSystemComparison(N=1000, k=None,
-                            r=0.05, T=1., L=1.,
+                            r=0.05, T0=0., T=1., L=1.,
+                            number_of_steps=100,
                             control="sin",
                             integrator="dopri5", integrator_options={}):
     if k is None:
@@ -96,6 +97,12 @@ def controllableHeatSystemComparison(N=1000, k=None,
         unred_sys[0]["sys"].integrator = integrator
         unred_sys[0]["sys"].integrator_options = integrator_options
 
+    reducedAnalysis2D(unred_sys, control, k, T0, T, L, number_of_steps,
+                      picture_destination="../plots/controllable_heat_{}_t{:.2f}_azim_{}.png")
+
+def reducedAnalysis2D(unred_sys, control, k=10,
+                      T0=0., T=1., L=1., number_of_steps=100,
+                      picture_destination="../plots/plot_{}_t{:.2f}_azim_{}.png"):
     sys = unred_sys[0]["sys"]
 
     print("REDUCTIONS\n--------------")
@@ -105,9 +112,9 @@ def controllableHeatSystemComparison(N=1000, k=None,
                {"name" : "balanced truncated ab09ax with k = {}".format(k),
                     "reduction" : "truncation_square_root_trans_matrix",
                     "k" : k},
-               {"name" : "balanced truncated in Python with k = {}".format(k),
-                    "reduction" : "inoptimal_truncation_square_root",
-                    "k" : k},
+#               {"name" : "balanced truncated in Python with k = {}".format(k),
+#                    "reduction" : "inoptimal_truncation_square_root",
+#                    "k" : k},
                {"name" : "controllability gramian reduction with k={}".format(k),
                     "reduction" : "controllability_truncation",
                     "k" : k}]
@@ -123,7 +130,7 @@ def controllableHeatSystemComparison(N=1000, k=None,
 
     print("============\nEVALUATIONS\n===============")
 
-    timeSteps = list(np.linspace(0, T, 100))
+    timeSteps = list(np.linspace(T0, T, number_of_steps))
     systems = unred_sys + red_sys
 
     for system in systems:
@@ -144,6 +151,11 @@ def controllableHeatSystemComparison(N=1000, k=None,
         print("and a maximal error of", max(system["eps"]))
 
     print("==============\nPLOTS\n==============")
+
+    figure(2)
+    for system in systems[1:]:
+        plot(timeSteps, system["eps"], label=system["name"])
+    legend(loc="upper left")
 
     fig = figure()
 
@@ -175,12 +187,7 @@ def controllableHeatSystemComparison(N=1000, k=None,
     for ii in xrange(360, 0, -10):
         for ax in axes:
             ax.azim = ii
-        fig.savefig("../plots/controllable_heat_{}_t{:.2f}_azim_{}.png".format(control, T, axes[0].azim))
-
-    figure(2)
-    for system in systems[1:]:
-        plot(timeSteps, system["eps"], label=system["name"])
-    legend(loc="upper left")
+        fig.savefig(picture_destination.format(control, T, axes[0].azim))
 
 def optionPricingComparison(N=1000, k=None,
                             option="put", r=0.05, T=1., K=10., L=None,
@@ -288,10 +295,15 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, k2=28, r=3,
 
     print(unred_sys[0]["name"])
     with Timer():
-        C0, unred_sys[0]["sys"] = e2s.thermalRCNetwork(R, C, n, r, u, input_scale=input_scale)
+        C0, unred_sys[0]["sys"] = e2s.thermalRCNetwork(R, C, n, r, u,
+                                                       input_scale=input_scale)
         unred_sys[0]["sys"].integrator = integrator
         unred_sys[0]["sys"].integrator_options = integrator_options
 
+    reducedAnalysis1D(unred_sys, k, k2, T0, T, number_of_steps)
+
+def reducedAnalysis1D(unred_sys, k=10, k2=28,
+                      T0=0., T=1., number_of_steps=100):
     print("REDUCTIONS\n--------------")
 
     red_sys = [{"name" : "auto truncated ab09ax",
@@ -353,6 +365,49 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, k2=28, r=3,
         plot(timeSteps, system["eps"], label=system["name"])
     legend(loc="upper left")
 
+    raise Exception
+
+def loadHeat(k=10, k2=28, T0=0., T=1., number_of_steps=100,
+             control="sin", omega=math.pi, control_scale=1.,
+             integrator="dopri5",
+             integrator_options={}):
+    u = lambda t, x=None: np.array([e2s.simple_functions[control](omega*t) * 
+                                    control_scale])
+
+    unred_sys = [{"name" : "Heat equation from the SLICOT benchmarks"}]
+
+    print(unred_sys[0]["name"])
+    with Timer():
+        unred_sys[0]["sys"] = e2s.example2sys("heat-cont.mat")
+        unred_sys[0]["sys"].control = u
+        unred_sys[0]["sys"].integrator = integrator
+        unred_sys[0]["sys"].integrator_options = integrator_options
+
+    return unred_sys
+
+def compareHeat(k=10, k2=28, T0=0., T=1., number_of_steps=100,
+                control="sin", omega=math.pi, control_scale=1.,
+                integrator="dopri5",
+                integrator_options={}):
+    unred_sys = loadHeat(k, k2, T0, T, number_of_steps,
+                         control, omega, control_scale,
+                         integrator, integrator_options)
+
+    reducedAnalysis1D(unred_sys, k, k2, T0, T, number_of_steps)
+
+def compareHeatStates(k=10, k2=28, T0=0., T=1., number_of_steps=100,
+                      control="sin", omega=math.pi, control_scale=1.,
+                      integrator="dopri5",
+                      integrator_options={}):
+    unred_sys = loadHeat(k, k2, T0, T, number_of_steps,
+                         control, omega, control_scale,
+                         integrator, integrator_options)
+    unred_sys[0]["sys"].C = np.eye(unred_sys[0]["sys"].order)
+
+    L=1.
+
+    reducedAnalysis2D(unred_sys, control, k, T0, T, L, number_of_steps,
+                      picture_destination="../plots/slicot_heat_{}_t{:.2f}_azim_{}.png")
 
 def reduce(sys, red_sys):
     for system in red_sys:

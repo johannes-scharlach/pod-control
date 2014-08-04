@@ -296,7 +296,7 @@ def controllability_truncation(A, B, C, k, check_stability=True):
     P = linalg.solve_lyapunov(A, -np.dot(B, B.conj().transpose()))
 
     Lambdak, Uk = linalg.eigh(P, eigvals=(N-k,N-1), check_finite=False,
-                                 overwrite_a=True, overwrite_b=True)
+                                 overwrite_a=False, overwrite_b=False)
 
     UkH = Uk.conj().transpose()
 

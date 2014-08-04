@@ -3,7 +3,7 @@ import random
 import math
 import numpy as np
 from scipy import linalg
-from matplotlib.pyplot import plot, subplot, legend, figure
+from matplotlib.pyplot import plot, subplot, legend, figure, semilogy, semilogx
 from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
 import example2sys as e2s
@@ -78,7 +78,7 @@ class Timer(object):
         print('Time elapsed {} seconds'.format(self.elapsed))
         return False
 
-def controllableHeatSystemComparison(N=1000, k=None,
+def controllableHeatSystemComparison(N=1000, k=None, k2=None,
                             r=0.05, T0=0., T=1., L=1.,
                             number_of_steps=100,
                             control="sin",
@@ -97,10 +97,10 @@ def controllableHeatSystemComparison(N=1000, k=None,
         unred_sys[0]["sys"].integrator = integrator
         unred_sys[0]["sys"].integrator_options = integrator_options
 
-    reducedAnalysis2D(unred_sys, control, k, T0, T, L, number_of_steps,
+    reducedAnalysis2D(unred_sys, control, k, k2, T0, T, L, number_of_steps,
                       picture_destination="../plots/controllable_heat_{}_t{:.2f}_azim_{}.png")
 
-def reducedAnalysis2D(unred_sys, control, k=10,
+def reducedAnalysis2D(unred_sys, control, k=10, k2=None,
                       T0=0., T=1., L=1., number_of_steps=100,
                       picture_destination="../plots/plot_{}_t{:.2f}_azim_{}.png"):
     sys = unred_sys[0]["sys"]
@@ -109,22 +109,26 @@ def reducedAnalysis2D(unred_sys, control, k=10,
 
     red_sys = [{"name" : "auto truncated ab09ax",
                     "reduction" : "truncation_square_root_trans_matrix"},
-               {"name" : "balanced truncated ab09ax with k = {}".format(k),
+               {"name" : "balanced truncated ab09ax\nwith k = {}".format(k),
                     "reduction" : "truncation_square_root_trans_matrix",
-                    "k" : k},
+                    "k" : k}]
 #               {"name" : "balanced truncated in Python with k = {}".format(k),
 #                    "reduction" : "inoptimal_truncation_square_root",
 #                    "k" : k},
-               {"name" : "controllability gramian reduction with k={}".format(k),
+    if k2:
+        red_sys.append({"name" : "controllability gramian\nreduction with k={}".format(k2),
                     "reduction" : "controllability_truncation",
-                    "k" : k}]
+                    "k" : k2})
+    red_sys.append({"name" : "controllability gramian\nreduction with k={}".format(k),
+                    "reduction" : "controllability_truncation",
+                    "k" : k})
 
-    if sys.x0 is None:
-        red_sys += [{"name" : "auto truncated ab09ad",
-                        "reduction" : "truncation_square_root"},
-                    {"name" : "balanced truncated ab09ad with k = {}".format(k),
-                        "reduction" : "truncation_square_root",
-                        "k" : k}]
+#    if sys.x0 is None:
+#        red_sys += [{"name" : "auto truncated ab09ad",
+#                        "reduction" : "truncation_square_root"},
+#                    {"name" : "balanced truncated ab09ad\nwith k = {}".format(k),
+#                        "reduction" : "truncation_square_root",
+#                        "k" : k}]
 
     red_sys = reduce(unred_sys[0]["sys"], red_sys)
 
@@ -148,7 +152,8 @@ def reducedAnalysis2D(unred_sys, control, k=10,
         print(system["name"], "has order", system["sys"].order)
         system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
                          for y, yhat in zip(Y, system["Y"])]
-        print("and a maximal error of", max(system["eps"]))
+        print("and a maximal error of {}".format(max(system["eps"])))
+        print("and an error at t=T of {}".format(system["eps"][-1]))
 
     print("==============\nPLOTS\n==============")
 
@@ -183,11 +188,13 @@ def reducedAnalysis2D(unred_sys, control, k=10,
         axes[-1].set_ylabel("l")
         axes[-1].set_zlabel("temperature")
 
+    save_figures = raw_input("Do you want to save the figures? (y/N) ")
 
-    for ii in xrange(360, 0, -10):
-        for ax in axes:
-            ax.azim = ii
-        fig.savefig(picture_destination.format(control, T, axes[0].azim))
+    if save_figures == "y":
+        for ii in xrange(360, 0, -10):
+            for ax in axes:
+                ax.azim = ii
+            fig.savefig(picture_destination.format(control, T, axes[0].azim))
 
 def optionPricingComparison(N=1000, k=None,
                             option="put", r=0.05, T=1., K=10., L=None,
@@ -308,17 +315,17 @@ def reducedAnalysis1D(unred_sys, k=10, k2=28,
 
     red_sys = [{"name" : "auto truncated ab09ax",
                     "reduction" : "truncation_square_root_trans_matrix"},
-               {"name" : "auto truncated ab09ad",
-                    "reduction" : "truncation_square_root"},
+#               {"name" : "auto truncated ab09ad",
+#                    "reduction" : "truncation_square_root"},
                {"name" : "controllability gramian reduction with k={}".format(k2),
                     "reduction" : "controllability_truncation",
                     "k" : k2},
                {"name" : "balanced truncated ab09ax with k = {}".format(k),
                     "reduction" : "truncation_square_root_trans_matrix",
                     "k" : k},
-               {"name" : "balanced truncated ab09ad with k = {}".format(k),
-                    "reduction" : "truncation_square_root",
-                    "k" : k},
+#               {"name" : "balanced truncated ab09ad with k = {}".format(k),
+#                    "reduction" : "truncation_square_root",
+#                    "k" : k},
                {"name" : "controllability gramian reduction with k={}".format(k),
                     "reduction" : "controllability_truncation",
                     "k" : k}]
@@ -346,7 +353,8 @@ def reducedAnalysis1D(unred_sys, k=10, k2=28,
         print(system["name"], "has order", system["sys"].order)
         system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
                          for y, yhat in zip(Y, system["Y"])]
-        print("and a maximal error of", max(system["eps"]))
+        print("and a maximal error of {}".format(max(system["eps"])))
+        print("and an error at t=T of {}".format(system["eps"][-1]))
 
     print("==============\nPLOTS\n==============")
 
@@ -365,16 +373,26 @@ def reducedAnalysis1D(unred_sys, k=10, k2=28,
         plot(timeSteps, system["eps"], label=system["name"])
     legend(loc="upper left")
 
-    raise Exception
+    markers = ['o', 'v', '*', 'x', 'd']
+
+    figure(3)
+    for system, marker in zip(systems[1:], markers):
+        sv = list(system["sys"].hsv)
+        sv.sort()
+        sv.reverse()
+        semilogy(range(len(sv)), sv,
+                 marker=marker, label=system["name"])
+    legend(loc="upper right")
 
 def loadHeat(k=10, k2=28, T0=0., T=1., number_of_steps=100,
              control="sin", omega=math.pi, control_scale=1.,
+             all_state_vars=False,
              integrator="dopri5",
              integrator_options={}):
     u = lambda t, x=None: np.array([e2s.simple_functions[control](omega*t) * 
                                     control_scale])
 
-    unred_sys = [{"name" : "Heat equation from the SLICOT benchmarks"}]
+    unred_sys = [{"name" : "Heat equation from\nthe SLICOT benchmarks"}]
 
     print(unred_sys[0]["name"])
     with Timer():
@@ -383,30 +401,34 @@ def loadHeat(k=10, k2=28, T0=0., T=1., number_of_steps=100,
         unred_sys[0]["sys"].integrator = integrator
         unred_sys[0]["sys"].integrator_options = integrator_options
 
+    if all_state_vars:
+        unred_sys[0]["sys"].C = np.eye(unred_sys[0]["sys"].order)
+
     return unred_sys
 
-def compareHeat(k=10, k2=28, T0=0., T=1., number_of_steps=100,
+def compareHeat(k=10, k2=28, T0=0., T=10., number_of_steps=300,
                 control="sin", omega=math.pi, control_scale=1.,
                 integrator="dopri5",
                 integrator_options={}):
     unred_sys = loadHeat(k, k2, T0, T, number_of_steps,
                          control, omega, control_scale,
+                         False,
                          integrator, integrator_options)
 
     reducedAnalysis1D(unred_sys, k, k2, T0, T, number_of_steps)
 
-def compareHeatStates(k=10, k2=28, T0=0., T=1., number_of_steps=100,
+def compareHeatStates(k=10, k2=37, T0=0., T=10., number_of_steps=300,
                       control="sin", omega=math.pi, control_scale=1.,
                       integrator="dopri5",
                       integrator_options={}):
     unred_sys = loadHeat(k, k2, T0, T, number_of_steps,
                          control, omega, control_scale,
+                         True,
                          integrator, integrator_options)
-    unred_sys[0]["sys"].C = np.eye(unred_sys[0]["sys"].order)
 
     L=1.
 
-    reducedAnalysis2D(unred_sys, control, k, T0, T, L, number_of_steps,
+    reducedAnalysis2D(unred_sys, control, k, k2, T0, T, L, number_of_steps,
                       picture_destination="../plots/slicot_heat_{}_t{:.2f}_azim_{}.png")
 
 def reduce(sys, red_sys):

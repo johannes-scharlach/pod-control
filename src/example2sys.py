@@ -22,12 +22,12 @@ simple_functions = {"sin" : lambda x : math.sin(x),
         "BLaC" : BLaC,
         "BLaCsteep" : lambda x : BLaC(x, delta=0.1)}
 
-def _todense(A):
+def _todense_float(A):
     if scipy.sparse.issparse(A):
-        return A.toarray()
+        return A.toarray()*1.
     elif A is None:
         return None
-    return np.asanyarray(A)
+    return np.asanyarray(A, dtype=np.float)
 
 def example2sys(filename):
     data = scipy.io.loadmat('example_data/' + filename)
@@ -35,21 +35,22 @@ def example2sys(filename):
     B = data['B']
     C = data.get('C', B.transpose())
     D = data.get('D', None)
-    return pod.lss(*map(_todense, [A, B, C, D]))
+    return pod.lss(*map(_todense_float, [A, B, C, D]))
 
-def heatSystemA(sizes, h2):
+def heatSystemA(sizes, h2, alpha):
     """Build matrix A for a heat equation"""
     if len(sizes) != 1:
         raise NotImplementedError("dimensions other than 1 not yet implemented")
     N = sizes[0]
     h2 = h2[0]
-    main_diagonal = np.ones(N-1) * (-2 / h2)
-    secondary_diagonal = np.ones(N-2) / h2
+    alpha = alpha[0]
+    main_diagonal = np.ones(N-1) * (-2 / h2) * alpha
+    secondary_diagonal = np.ones(N-2) / h2 * alpha
 
     return np.diag(main_diagonal) + np.diag(secondary_diagonal, 1) + \
             np.diag(secondary_diagonal, -1)
 
-def controllableHeatSystem(N, L=1., control="sin"):
+def controllableHeatSystem(N, alpha=1., L=1., control="sin"):
     if N % 2:
         raise ValueError("N-1 has to be odd, to control the middle")
 
@@ -58,7 +59,7 @@ def controllableHeatSystem(N, L=1., control="sin"):
 
     h2 = (L/N)**2
 
-    A = heatSystemA([N], [h2])
+    A = heatSystemA([N], [h2], [alpha])
 
     B = np.zeros((N-1, 1))
     B[N/2-1][0] = input_scale
@@ -81,7 +82,7 @@ def controllableHeatSystem(N, L=1., control="sin"):
 
     return sys
 
-def heatSystem(N, L=1.0, g0_scale=None, gN_scale=None):
+def heatSystem(N, g0_scale=None, gN_scale=None, alpha=1., L=1.0):
     """Generate a state space system that solves the heat equation.
 
     This sets up the matrices `A`, `B`, `C` and `D` where `B` is scaled in a
@@ -94,7 +95,7 @@ def heatSystem(N, L=1.0, g0_scale=None, gN_scale=None):
 
     h2 = (L/N)**2
     
-    A = heatSystemA([N], [h2])
+    A = heatSystemA([N], [h2], [alpha])
 
     B = np.zeros((N-1, inputs))
     if g0_scale:

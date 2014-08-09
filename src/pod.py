@@ -257,7 +257,7 @@ def inoptimal_truncation_square_root(A, B, C, k):
 
 def controllability_truncation(A, B, C, k,
                                check_stability=False,
-                               use_scipy=False):
+                               use_scipy=None):
     """Truncate the system based on the controllability Gramian
 
     Solves the Lyapunov Equation for ``AP + PA^H + B B^H`` and computes the
@@ -273,6 +273,11 @@ def controllability_truncation(A, B, C, k,
         Should be checked if A is stable and hence the controllability Gramian
         exists
     use_scipy : boolean, optional
+        Compute the solution of the Lyapunov Equation through
+        ``scipy.linalg.solve_lyapunov`` if `True`, through ``slycot.sb03md``
+        if `False` and if the value of this parameter is `None`,
+        ``slycot.sb03md`` is used if available. The latter should lead to
+        better performance.
 
     Returns
     -------
@@ -296,12 +301,24 @@ def controllability_truncation(A, B, C, k,
 
     N = A.shape[0]
 
+    try:
+        from slycot import sb03md
+    except ImportError, e:
+        if use_scipy is False:
+            raise ImportError("can't find slycot subroutine sb03md")
+        else:
+            use_scipy = True
+    else:
+        if use_scipy is None:
+            use_scipy = False
+
     if use_scipy:
         P = linalg.solve_lyapunov(A, -np.dot(B, B.conj().transpose()))
     else:
-        from slycot import sb03md
         res = sb03md(N, -np.dot(B, B.conj().transpose()), A, np.eye(N), 'C')
-        P = res[0]
+        P, scale, sep, ferr, w = res
+        if scale < 1.:
+            raise NotImplementedError("Handling scale<1. is not yet implemented.")
 
     Lambdak, Uk = linalg.eigh(P, eigvals=(N-k,N-1), check_finite=False,
                                  overwrite_a=False, overwrite_b=False)

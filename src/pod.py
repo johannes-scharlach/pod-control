@@ -20,7 +20,7 @@ from futurescipy import abcd_normalize
 def truncation_square_root(A, B, C,
                            k=None, tol=0.0,
                            balance=True, scale=True,
-                           check_stability=True,
+                           check_stability=False,
                            length_cache_array=None):
     """Perform truncation of a system. Scaling and balancing are optional
 
@@ -109,7 +109,7 @@ def truncation_square_root(A, B, C,
 def truncation_square_root_trans_matrix(A, B, C,
                                         k=None, tol=0.0,
                                         overwrite_a=False,
-                                        balance=True, check_stability=True,
+                                        balance=True, check_stability=False,
                                         length_cache_array=None):
     """Truncate the system and return transition matrices
 
@@ -255,7 +255,9 @@ def inoptimal_truncation_square_root(A, B, C, k):
     return k, np.dot(T1, np.dot(A, Ti1)), np.dot(T1, B), np.dot(C, Ti1), \
             Sigma, T1, Ti1
 
-def controllability_truncation(A, B, C, k, check_stability=True):
+def controllability_truncation(A, B, C, k,
+                               check_stability=False,
+                               use_scipy=False):
     """Truncate the system based on the controllability Gramian
 
     Solves the Lyapunov Equation for ``AP + PA^H + B B^H`` and computes the
@@ -270,6 +272,7 @@ def controllability_truncation(A, B, C, k, check_stability=True):
     check_stability : boolean, optional
         Should be checked if A is stable and hence the controllability Gramian
         exists
+    use_scipy : boolean, optional
 
     Returns
     -------
@@ -293,7 +296,12 @@ def controllability_truncation(A, B, C, k, check_stability=True):
 
     N = A.shape[0]
 
-    P = linalg.solve_lyapunov(A, -np.dot(B, B.conj().transpose()))
+    if use_scipy:
+        P = linalg.solve_lyapunov(A, -np.dot(B, B.conj().transpose()))
+    else:
+        from slycot import sb03md
+        res = sb03md(N, -np.dot(B, B.conj().transpose()), A, np.eye(N), 'C')
+        P = res[0]
 
     Lambdak, Uk = linalg.eigh(P, eigvals=(N-k,N-1), check_finite=False,
                                  overwrite_a=False, overwrite_b=False)
@@ -308,7 +316,7 @@ def controllability_truncation(A, B, C, k, check_stability=True):
 
 def isStable(A):
     """Check if all eigenvalues are in the left half of the complex plane"""
-    D, V = linalg.eig(A)
+    D, V = linalg.eigh(A)
     return (D.real < 0).all()
 
 class lss(object):

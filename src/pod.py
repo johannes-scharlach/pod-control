@@ -170,6 +170,8 @@ def truncation_square_root_trans_matrix(A, B, C,
     -----
     see truncation_square_root
     """
+    if check_stability and not isStable(A):
+        raise ValueError("This doesn't seem to be a stable system!")
 
     A, T, sdim = linalg.schur(A, sort='lhp', overwrite_a=overwrite_a)
 
@@ -230,7 +232,9 @@ def truncation_square_root_schur(A,B,C,
 
     return nr, A, B, C, hsv, T_, Ti_
 
-def inoptimal_truncation_square_root(A, B, C, k):
+def inoptimal_truncation_square_root(A, B, C, k, check_stability=False):
+    if check_stability and not isStable(A):
+        raise ValueError("This doesn't seem to be a stable system!")
     AH = A.transpose().conj()
     P = linalg.solve_lyapunov(A, -np.dot(B, B.transpose().conj()))
     Q = linalg.solve_lyapunov(AH, -np.dot(C.transpose().conj(), C))
@@ -455,7 +459,11 @@ class lss(object):
         """Current time of the system
 
         """
-        return self.state.t
+        try:
+            t = self.state.t
+        except AttributeError:
+            t = self.t0
+        return t
 
     @property
     def y(self):
@@ -490,7 +498,7 @@ class lss(object):
         self.state.set_initial_value(x0, self.t0)
         self.state.set_f_params(self.control)
 
-    def __call__(self, times, control=None, force_ode_reset=False):
+    def __call__(self, times, force_ode_reset=False):
         """Get the output at specified times with a provided control
 
         It is possible to only request the output at one particular time
@@ -503,19 +511,11 @@ class lss(object):
         ----------
         times : list or scalar
             The output for these timese will be calculated
-        control : callable ``control(t, y)`` or array_like, optional
-            If it is specified, it will be overwritten in the attributes.
         force_ode_reset : Boolean, optional
             If it's called, the ode solver is reset and the current attributes
             are used.
 
         """
-
-        if control is not None:
-            self.control = control
-            if self.state and not force_ode_reset:
-                self.state.set_f_params(control)
-
         if force_ode_reset or not self.state:
             self.setupODE()
 
@@ -540,8 +540,7 @@ class lss(object):
         return results if return_list else results[0]
 
     def solve(self, t):
-        if not self.state:
-            self.setupODE()
-        self.state.integrate(t)
+        if t is not self.t:
+            self.state.integrate(t)
         return self.x
 

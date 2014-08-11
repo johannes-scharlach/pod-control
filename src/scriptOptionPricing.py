@@ -3,7 +3,8 @@ import random
 import math
 import numpy as np
 from scipy import linalg
-from matplotlib.pyplot import plot, subplot, legend, figure
+from matplotlib.pyplot import plot, subplot, legend, figure, show, suptitle, \
+        xlabel, ylabel
 from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
 import example2sys as e2s
@@ -13,9 +14,10 @@ from analysis import *
 
 N = 1000
 k = 20
+k2 = 62
 integrator = "dopri5"
 integrator_options = {}
-T = 1
+T = 1.
 L = 30
 K = 10.5
 r = 0.05
@@ -45,6 +47,9 @@ red_sys = [{"name" : "auto truncated ab09ax",
            {"name" : "balanced truncated ab09ax with k = {}".format(k),
                 "reduction" : "truncation_square_root_trans_matrix",
                 "k" : k},
+           {"name" : "controllability gramian reduction with k={}".format(k2),
+                "reduction" : "controllability_truncation",
+                "k" : k2},
            {"name" : "controllability gramian reduction with k={}".format(k),
                 "reduction" : "controllability_truncation",
                 "k" : k}]
@@ -53,7 +58,7 @@ red_sys = reduce(unred_sys[0]["sys"], red_sys)
 
 print("============\nEVALUATIONS\n===============")
 
-timeSteps = list(np.linspace(0, T, 30))
+timeSteps = list(np.linspace(0., T, 30))
 systems = unred_sys + red_sys
 
 for system in systems:
@@ -69,13 +74,13 @@ Y = systems[0]["Y"]
 
 for system in systems:
     print(system["name"], "has order", system["sys"].order)
-    system["eps"] = [0.] + [linalg.norm(y-yhat, ord=norm_order)
-                            for y, yhat in zip(Y[1:], system["Y"][1:])]
+    system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
+                     for y, yhat in zip(Y[:], system["Y"][:])]
     print("and a maximal error of", max(system["eps"]))
 
 print("==============\nPLOTS\n==============")
 
-fig = figure(1)
+fig = figure()
 
 N2 = int(1.5*K*N/L)
 X, Y = [], []
@@ -96,14 +101,34 @@ for system in range(4):
                     linewidth=0, antialiased=False)
     axes[-1].set_title(systems[system]["name"], **font_options)
     axes[-1].set_xlabel("-t", **font_options)
-    axes[-1].set_ylabel("K", **font_options)
-    axes[-1].set_zlabel("Lambda(K)", **font_options)
+    axes[-1].set_ylabel("S", **font_options)
+    axes[-1].set_zlabel("f", **font_options)
 
 for ax in axes:
     ax.azim = 26
-fig.savefig("../plots/{}_option_azim_{}.png".format(option, axes[0].azim))
+# fig.savefig("../plots/{}_option_azim_{}.png".format(option, axes[0].azim),
+#             bbox_inches="tight")
 
-figure(2)
+fig = figure()
 for system in systems[1:]:
-    plot(timeSteps, system["eps"], label=system["name"])
-legend(loc="upper left")
+    plot(timeSteps[:], system["eps"], label=system["name"])
+legend(loc="upper right")
+xlabel("t")
+ylabel("Error")
+
+# fig.savefig("../plots/{}_option_pricing_errors.png".format(option),
+#             bbox_inches="tight")
+
+fig = figure()
+for system in systems[1:]:
+    plot([j*L/N for j in range(N2)],
+         systems[0]["Y"][0][:N2]-system["Y"][0][:N2],
+         label=system["name"])
+legend(loc="upper right")
+xlabel("S")
+ylabel("Error")
+
+# fig.savefig("../plots/{}_option_pricing_errors_t0.png".format(option),
+#             bbox_inches="tight")
+
+show()

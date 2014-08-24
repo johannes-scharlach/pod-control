@@ -378,11 +378,9 @@ def reducedAnalysis1D(unred_sys, k=10, k2=28,
     figure(3)
     for system, marker in zip(systems[1:], markers):
         sv = list(system["sys"].hsv)
-        sv.sort()
-        sv.reverse()
         semilogy(range(len(sv)), sv,
                  marker=marker, label=system["name"])
-    legend(loc="upper right")
+    legend(loc="lower left")
 
 def loadHeat(k=10, k2=28, T0=0., T=1., number_of_steps=100,
              control="sin", omega=math.pi, control_scale=1.,

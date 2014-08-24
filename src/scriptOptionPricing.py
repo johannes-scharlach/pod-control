@@ -14,7 +14,7 @@ from analysis import *
 
 N = 1000
 k = 20
-k2 = 62
+k2 = 107
 integrator = "dopri5"
 integrator_options = {}
 T = 1.

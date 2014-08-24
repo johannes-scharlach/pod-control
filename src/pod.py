@@ -242,7 +242,8 @@ def inoptimal_truncation_square_root(A, B, C, k, check_stability=False):
     U = linalg.cholesky(P).transpose().conj()
     L = linalg.cholesky(Q)
 
-    W, Sigma, V = linalg.svd(np.dot(U.transpose().conj()), full_matrices=false,
+    W, Sigma, V = linalg.svd(np.dot(U.transpose().conj(), L),
+                             full_matrices=False,
                              overwrite_a=True, check_finite=False)
 
     W1 = W[:, :k]
@@ -257,11 +258,12 @@ def inoptimal_truncation_square_root(A, B, C, k, check_stability=False):
                  Sigma1_pow_neg_half)
 
     return k, np.dot(T1, np.dot(A, Ti1)), np.dot(T1, B), np.dot(C, Ti1), \
-            Sigma, T1, Ti1
+            Sigma, Ti1, T1
 
 def controllability_truncation(A, B, C, k,
                                check_stability=False,
-                               use_scipy=None):
+                               use_scipy=None,
+                               compute_svd=False):
     """Truncate the system based on the controllability Gramian
 
     Solves the Lyapunov Equation for ``AP + PA^H + B B^H`` and computes the
@@ -324,8 +326,15 @@ def controllability_truncation(A, B, C, k,
         if scale < 1.:
             raise NotImplementedError("Handling scale<1. is not yet implemented.")
 
-    Lambdak, Uk = linalg.eigh(P, eigvals=(N-k,N-1), check_finite=False,
-                                 overwrite_a=False, overwrite_b=False)
+    Lambda, U = linalg.eigh(P, check_finite=False,
+                            overwrite_a=False, overwrite_b=False)
+
+    if compute_svd:
+        s = linalg.svd(P, compute_uv=False)
+    else:
+        s = Lambda[range(N-1, -1, -1)]
+
+    Uk = U[:, range(N-1, N-k-1, -1)]
 
     UkH = Uk.conj().transpose()
 
@@ -333,7 +342,7 @@ def controllability_truncation(A, B, C, k,
     B = np.dot(UkH, B)
     C = np.dot(C, Uk)
 
-    return k, A, B, C, Lambdak, Uk, UkH
+    return k, A, B, C, s, Uk, UkH
 
 def isStable(A):
     """Check if all eigenvalues are in the left half of the complex plane"""

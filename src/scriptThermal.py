@@ -11,8 +11,8 @@ from mpl_toolkits.mplot3d import axes3d
 control = "hat"
 
 T0 = 0.
-T = 30
-number_of_steps = 3000
+T = 80
+number_of_steps = 300
 omega = 1.
 
 R = 10.e0
@@ -34,6 +34,20 @@ rcValues = [{"resistors" : [5.52, 17.2, 55.2, 46.8, 56.7, 27.9],
                 "capacitors" : [.000455, .00388, .0115, .0481, .0316, 2.79],
                 "input_scale" : 1.,
                 "outputs" : range(6)},
+            {"resistors" : e2s._thermalRCNetworkResistors(.000455, .00388,
+                                                          5.52, 6, 3) + \
+                           [17.2, 55.2, 46.8, 56.7, 27.9],
+                "capacitors" : e2s._thermalRCNetworkCapacitors(.000455, 6, 3) +\
+                               [.00388, .0115, .0481, .0316, 2.79],
+                "input_scale" : 1.,
+                "outputs" : [-1]},
+            {"resistors" : e2s._thermalRCNetworkResistors(.000455, .00388,
+                                                          5.52, 20, 3) + \
+                           [17.2, 55.2, 46.8, 56.7, 27.9],
+                "capacitors" : e2s._thermalRCNetworkCapacitors(.000455, 20, 3) \
+                               + [.00388, .0115, .0481, .0316, 2.79],
+                "input_scale" : 1.,
+                "outputs" : [-1]},
             {"resistors" : [R + i * deltaR for i in xrange(n)],
                 "capacitors" : [C + i * deltaC for i in xrange(n)],
                 "input_scale" : u_scale,
@@ -70,7 +84,7 @@ Y = sys(timeSteps)
 
 fig = figure()
 if len(outputs) is 1:
-    fig.plot(timeSteps, Y)
+    plot(timeSteps, Y)
 else:
     ax = fig.add_subplot(111, projection='3d')
     Xgrid, Ygrid = np.meshgrid(outputs, timeSteps)

@@ -203,7 +203,7 @@ def rcLadder(resistors, capacitors, input_scale=1., outputs=[-1]):
 
 def thermalRCNetwork(R, C, n, r, u, input_scale=1.):
     capacitors = _thermalRCNetworkCapacitors(C, n, r)
-    resistors = _thermalRCNetworkResistors(R, n, r)
+    resistors = _thermalRCNetworkResistors(C, 0., R, n, r)
 
     sys = rcLadder(resistors, capacitors[1:], outputs=[0], input_scale=input_scale)
 
@@ -212,11 +212,13 @@ def thermalRCNetwork(R, C, n, r, u, input_scale=1.):
     return capacitors[0], sys
 
 def _thermalRCNetworkCapacitors(C, n, r):
-    return [(r-1)*(i+1)/(r**n-1)*C for i in range(n)]
+    return [(r-1)*(r**i)/(r**n-1)*C for i in range(n)]
 
-def _thermalRCNetworkResistors(R, n, r):
-    resistors = [2 + r] + [r**i + r**(i+1)*(i+1<n) for i in range(1,n)]
-    resistors = np.array(resistors) * ((r-1)/(r**n-1)*.5*R)
+def _thermalRCNetworkResistors(C, C0, R, n, r):
+    Rs = C / (C+C0) * R
+    resistors = [(2+r)*(r-1)*.5] + [r**i + r**(i+1) for i in range(1,n-1)]
+    resistors = np.array(resistors) * (1/(r**n-1)*Rs)
+    resistors = list(resistors) + [ (3**(n-1) / (3**n - 1) - 1) * Rs + R ]
     return list(resistors)
 
 def _neg(x):

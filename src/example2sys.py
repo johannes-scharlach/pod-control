@@ -7,20 +7,23 @@ import pod
 import random
 import numpy as np
 
+
 def BLaC(x, delta=0.5):
     xMod = math.fmod(x, 2)
-    return xMod/delta*(xMod<delta) + 1*(xMod>=delta)*(xMod<=2-delta) \
-            + (2-xMod)/delta*(xMod>2-delta)
+    return xMod/delta*(xMod < delta) + 1*(xMod >= delta)*(xMod <= 2-delta) \
+        + (2-xMod)/delta*(xMod > 2-delta)
 
-simple_functions = {"sin" : lambda x : math.sin(x),
-        "cos" : lambda x : math.cos(x),
-        "zero" : lambda x : 0.,
-        "one" : lambda x : 1.,
-        "identity" : lambda x : x,
-        "hat" : lambda x : (math.fmod(x+1, 2.)-1) * \
-                (1-2*(math.fmod(x+1, 4.)>2)),
-        "BLaC" : BLaC,
-        "BLaCsteep" : lambda x : BLaC(x, delta=0.1)}
+simple_functions = {
+    "sin": lambda x: math.sin(x),
+    "cos": lambda x: math.cos(x),
+    "zero": lambda x: 0.,
+    "one": lambda x: 1.,
+    "identity": lambda x: x,
+    "hat": lambda x: (math.fmod(x+1, 2.)-1) *
+    (1-2*(math.fmod(x+1, 4.) > 2)),
+    "BLaC": BLaC,
+    "BLaCsteep": lambda x: BLaC(x, delta=0.1)}
+
 
 def _todense_float(A):
     if scipy.sparse.issparse(A):
@@ -28,6 +31,7 @@ def _todense_float(A):
     elif A is None:
         return None
     return np.asanyarray(A, dtype=np.float)
+
 
 def example2sys(filename):
     data = scipy.io.loadmat('example_data/' + filename)
@@ -37,10 +41,12 @@ def example2sys(filename):
     D = data.get('D', None)
     return pod.lss(*map(_todense_float, [A, B, C, D]))
 
+
 def heatSystemA(sizes, h2, alpha):
     """Build matrix A for a heat equation"""
     if len(sizes) != 1:
-        raise NotImplementedError("dimensions other than 1 not yet implemented")
+        e = "dimensions other than 1 not yet implemented"
+        raise NotImplementedError(e)
     N = sizes[0]
     h2 = h2[0]
     alpha = alpha[0]
@@ -48,7 +54,8 @@ def heatSystemA(sizes, h2, alpha):
     secondary_diagonal = np.ones(N-2) / h2 * alpha
 
     return np.diag(main_diagonal) + np.diag(secondary_diagonal, 1) + \
-            np.diag(secondary_diagonal, -1)
+        np.diag(secondary_diagonal, -1)
+
 
 def controllableHeatSystem(N, alpha=1., L=1., control="sin"):
     if N % 2:
@@ -82,6 +89,7 @@ def controllableHeatSystem(N, alpha=1., L=1., control="sin"):
 
     return sys
 
+
 def heatSystem(N, g0_scale=None, gN_scale=None, alpha=1., L=1.0):
     """Generate a state space system that solves the heat equation.
 
@@ -94,7 +102,7 @@ def heatSystem(N, g0_scale=None, gN_scale=None, alpha=1., L=1.0):
     inputs = (g0_scale is not None) + (gN_scale is not None)
 
     h2 = (L/N)**2
-    
+
     A = heatSystemA([N], [h2], [alpha])
 
     B = np.zeros((N-1, inputs))
@@ -112,6 +120,7 @@ def heatSystem(N, g0_scale=None, gN_scale=None, alpha=1., L=1.0):
     sys = pod.lss(A, B, C, D)
 
     return sys
+
 
 def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
     """Generate a State-Space System for the heat eqation for option pricing
@@ -134,7 +143,7 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
         if scaled:
             g0_scale = K
             gN_scale = None
-        x0 = [max(K-h*i, 0) for i in range(1,N)]
+        x0 = [max(K-h*i, 0) for i in range(1, N)]
     elif option is "call":
         def boundary_conditions(t, y=None):
             b = 1 - math.e**(-r*(t))*K * (1 * (not scaled) + scaled / L)
@@ -142,7 +151,7 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
         if scaled:
             g0_scale = None
             gN_scale = L
-        x0 = [max(h*i-K, 0) for i in range(1,N)]
+        x0 = [max(h*i-K, 0) for i in range(1, N)]
     else:
         raise ValueError("No such option aviable")
 
@@ -151,6 +160,7 @@ def optionPricing(N=1000, option="put", r=0.05, T=1., K=100., L=None):
     sys.x0 = np.array(x0)
 
     return sys
+
 
 def rcLadder(resistors, capacitors, input_scale=1., outputs=[-1]):
     """A system of a rcLadder
@@ -191,43 +201,50 @@ def rcLadder(resistors, capacitors, input_scale=1., outputs=[-1]):
     right_diagonal = conductivities[1:-1] / capacitors[:-1]
 
     A = np.diag(main_diagonal) + np.diag(right_diagonal, 1) + \
-            np.diag(left_diagonal, -1)
-    B = np.zeros((N,1))
+        np.diag(left_diagonal, -1)
+    B = np.zeros((N, 1))
     B[0][0] = conductivities[0]/capacitors[0] * input_scale
-    C = np.zeros((len(outputs),N))
+    C = np.zeros((len(outputs), N))
     for i in range(len(outputs)):
         C[i][outputs[i]] = 1.
     D = None
 
-    return pod.lss(A,B,C,D)
+    return pod.lss(A, B, C, D)
+
 
 def thermalRCNetwork(R, C, n, r, u, input_scale=1.):
     capacitors = _thermalRCNetworkCapacitors(C, n, r)
     resistors = _thermalRCNetworkResistors(C, 0., R, n, r)
 
-    sys = rcLadder(resistors, capacitors[1:], outputs=[0], input_scale=input_scale)
+    sys = rcLadder(resistors, capacitors[1:], outputs=[0],
+                   input_scale=input_scale)
 
     sys.control = u
 
     return capacitors[0], sys
 
+
 def _thermalRCNetworkCapacitors(C, n, r):
     return [(r-1)*(r**i)/(r**n-1)*C for i in range(n)]
 
+
 def _thermalRCNetworkResistors(C, C0, R, n, r):
     Rs = C / (C+C0) * R
-    resistors = [(2+r)*(r-1)*.5] + [r**i + r**(i+1) for i in range(1,n-1)]
+    resistors = [(2+r)*(r-1)*.5] + [r**i + r**(i+1) for i in range(1, n-1)]
     resistors = np.array(resistors) * (1/(r**n-1)*Rs)
-    resistors = list(resistors) + [ (3**(n-1) / (3**n - 1) - 1) * Rs + R ]
+    resistors = list(resistors) + [(3**(n-1) / (3**n - 1) - 1) * Rs + R]
     return list(resistors)
 
+
 def _neg(x):
-    if x<0.:
+    if x < 0.:
         return -x
     return x
 
+
 def generateRandomExample(n, m, p=None,
-        distribution=random.gauss, distributionArguments=[0., 1.]):
+                          distribution=random.gauss,
+                          distributionArguments=[0., 1.]):
     """Generate a random example of arbitraty order
 
     Parameters
@@ -250,16 +267,18 @@ def generateRandomExample(n, m, p=None,
     if p is None:
         p = m
 
-    A = [[_neg(distribution(*distributionArguments)*(i>=j)) for i in range(n)]
-            for j in range(n)]
+    A = [[_neg(distribution(*distributionArguments)*(i >= j))
+          for i in range(n)]
+         for j in range(n)]
     B = [[distribution(*distributionArguments) for i in range(m)]
-            for j in range(n)]
+         for j in range(n)]
     C = [[distribution(*distributionArguments) for i in range(n)]
-            for j in range(p)]
+         for j in range(p)]
     D = [[distribution(*distributionArguments) for i in range(m)]
-            for j in range(p)]
+         for j in range(p)]
 
     return pod.lss(A, B, C, D)
+
 
 def stableRandomSystem(*args, **kwargs):
     for i in range(1000):

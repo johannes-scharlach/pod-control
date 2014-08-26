@@ -22,5 +22,5 @@ for key in f2p:
     plot(timeSteps, Y, label=key)
 
 legend(loc="lower right")
-ylim([-1.,1.1])
+ylim([-1., 1.1])
 xlim([T0, T])

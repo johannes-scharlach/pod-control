@@ -1,20 +1,15 @@
 from __future__ import division, print_function
-import random
-import math
 import numpy as np
 from scipy import linalg
-from matplotlib.pyplot import plot, subplot, legend, figure, show, suptitle, \
-        xlabel, ylabel
+from matplotlib.pyplot import plot, legend, figure, show, xlabel, ylabel
 from matplotlib import cm
-from mpl_toolkits.mplot3d import axes3d
 import example2sys as e2s
-import pod
-import time
 from analysis import *
 
 N = 1000
 k = 20
-k2 = 107
+k2 = 40
+k3 = 62
 integrator = "dopri5"
 integrator_options = {}
 T = 1.
@@ -28,8 +23,8 @@ font_options = {}
 
 print("SETUP\n====================")
 
-unred_sys = [{"name" : ("Heat equation for {} option pricing" +
-                " with n = {}").format(option, N)}]
+unred_sys = [{"name": ("Heat equation for {} option pricing" +
+              " with n = {}").format(option, N)}]
 
 print(unred_sys[0]["name"])
 with Timer():
@@ -42,17 +37,20 @@ sys = unred_sys[0]["sys"]
 
 print("REDUCTIONS\n--------------")
 
-red_sys = [{"name" : "auto truncated ab09ax",
-                "reduction" : "truncation_square_root_trans_matrix"},
-           {"name" : "balanced truncated ab09ax with k = {}".format(k),
-                "reduction" : "truncation_square_root_trans_matrix",
-                "k" : k},
-           {"name" : "controllability gramian reduction with k={}".format(k2),
-                "reduction" : "controllability_truncation",
-                "k" : k2},
-           {"name" : "controllability gramian reduction with k={}".format(k),
-                "reduction" : "controllability_truncation",
-                "k" : k}]
+red_sys = [{"name": "auto truncated ab09ax",
+            "reduction": "truncation_square_root_trans_matrix"},
+           {"name": "balanced truncated ab09ax with k = {}".format(k),
+            "reduction": "truncation_square_root_trans_matrix",
+            "k": k},
+           {"name": "controllability gramian reduction with k={}".format(k),
+            "reduction": "controllability_truncation",
+            "k": k},
+           {"name": "controllability gramian reduction with k={}".format(k2),
+            "reduction": "controllability_truncation",
+            "k": k2},
+           {"name": "controllability gramian reduction with k={}".format(k3),
+            "reduction": "controllability_truncation",
+            "k": k3}]
 
 red_sys = reduce(unred_sys[0]["sys"], red_sys)
 
@@ -80,7 +78,7 @@ for system in systems:
 
 print("==============\nPLOTS\n==============")
 
-fig = figure()
+fig = figure(figsize=(8, 11))
 
 N2 = int(1.5*K*N/L)
 X, Y = [], []
@@ -90,19 +88,19 @@ for i in range(len(timeSteps)):
 
 axes = []
 
-for system in range(4):
-    axes.append(fig.add_subplot(221+system, projection='3d'))
+for system in range(6):
+    axes.append(fig.add_subplot(321+system, projection='3d'))
 
     Z = []
     for i in range(len(timeSteps)):
         Z.append(list(systems[system]["Y"][i])[:N2])
 
     axes[-1].plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
-                    linewidth=0, antialiased=False)
+                          linewidth=0, antialiased=False)
     axes[-1].set_title(systems[system]["name"], **font_options)
-    axes[-1].set_xlabel("-t", **font_options)
-    axes[-1].set_ylabel("S", **font_options)
-    axes[-1].set_zlabel("f", **font_options)
+    axes[-1].set_xlabel("t", **font_options)
+    axes[-1].set_ylabel("A", **font_options)
+    axes[-1].set_zlabel("V", **font_options)
 
 for ax in axes:
     ax.azim = 26
@@ -125,7 +123,7 @@ for system in systems[1:]:
          systems[0]["Y"][0][:N2]-system["Y"][0][:N2],
          label=system["name"])
 legend(loc="upper right")
-xlabel("S")
+xlabel("A")
 ylabel("Error")
 
 # fig.savefig("../plots/{}_option_pricing_errors_t0.png".format(option),

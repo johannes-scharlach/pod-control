@@ -4,17 +4,16 @@
 
 from __future__ import division, print_function
 import numpy as np
-import scipy as sp
 import math
 from pod import *
 from example2sys import *
 import unittest
-from numpy.testing import assert_array_equal, assert_array_almost_equal, \
-                          assert_allclose
+from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 
 def _number_to_array(s):
     return np.array([s])
+
 
 class testPod(unittest.TestCase):
     """test lss functionalities"""
@@ -92,13 +91,14 @@ class testPod(unittest.TestCase):
         x = [10., 2.]
         u = [-3]
 
-        assert_array_equal(sys.f(0., np.array(x), u), np.array([10+2-3., 2-3.]))
+        assert_array_equal(sys.f(0., np.array(x), u),
+                           np.array([10+2-3., 2-3.]))
 
     def test_truncation_functions(self):
         """Reduce system of order 3 and check truncation matrices.
 
         Matrix `A` is in real schur form with all eigenvalues in the left half
-        of the complex plane. The system is reduced from order 3 to orders 1 
+        of the complex plane. The system is reduced from order 3 to orders 1
         and 2. Order, number of inputs and outputs and the pseudo inverse
         property of T and Ti of the systems are checked.
 
@@ -128,11 +128,12 @@ class testPod(unittest.TestCase):
                 if hasattr(rsys, 'T'):
                     assert rsys.T.shape == (3, k)
                     assert rsys.Ti.shape == (k, 3)
-    
+
                     assert_array_almost_equal(np.dot(rsys.Ti, rsys.T),
                                               np.eye(k))
                     assert_array_almost_equal(np.dot(rsys.Ti, sys.x0),
                                               rsys.x0)
+
 
 class testExample2sys(unittest.TestCase):
     """Test the example system generator"""
@@ -182,4 +183,3 @@ class testExample2sys(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    

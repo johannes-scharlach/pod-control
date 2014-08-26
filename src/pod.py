@@ -9,7 +9,6 @@ from __future__ import division, print_function
 import collections
 import numpy as np
 from scipy import linalg
-from numpy import array
 from scipy.integrate import ode
 # from scipy.signal.ltisys import abcd_normalize
 # currently buggy. Will be fixed in scipy v0.15
@@ -106,6 +105,7 @@ def truncation_square_root(A, B, C,
                   nr, tol,
                   ldwork=length_cache_array)
 
+
 def truncation_square_root_trans_matrix(A, B, C,
                                         k=None, tol=0.0,
                                         overwrite_a=False,
@@ -193,8 +193,9 @@ def truncation_square_root_trans_matrix(A, B, C,
 
     return nr, A, B, C, hsv, T, Ti
 
-def truncation_square_root_schur(A,B,C,
-                                 k=None,tol=0.0,
+
+def truncation_square_root_schur(A, B, C,
+                                 k=None, tol=0.0,
                                  balance=True,
                                  length_cache_array=None):
     """Use balanced truncation on a system with A in real Schur form
@@ -221,9 +222,9 @@ def truncation_square_root_schur(A,B,C,
     nr = k
 
     if not length_cache_array:
-        length_cache_array = 5*n**2 + n*m + n*p + 10*n + m*p   
+        length_cache_array = 5*n**2 + n*m + n*p + 10*n + m*p
 
-    nr,A,B,C,hsv,T_,Ti_ = \
+    nr, A, B, C, hsv, T_, Ti_ = \
         ab09ax(dico, job,
                n, m, p,
                A, B, C,
@@ -231,6 +232,7 @@ def truncation_square_root_schur(A,B,C,
                ldwork=length_cache_array)
 
     return nr, A, B, C, hsv, T_, Ti_
+
 
 def inoptimal_truncation_square_root(A, B, C, k, check_stability=False):
     if check_stability and not isStable(A):
@@ -258,7 +260,8 @@ def inoptimal_truncation_square_root(A, B, C, k, check_stability=False):
                  Sigma1_pow_neg_half)
 
     return k, np.dot(T1, np.dot(A, Ti1)), np.dot(T1, B), np.dot(C, Ti1), \
-            Sigma, Ti1, T1
+        Sigma, Ti1, T1
+
 
 def controllability_truncation(A, B, C, k,
                                check_stability=False,
@@ -309,7 +312,7 @@ def controllability_truncation(A, B, C, k,
 
     try:
         from slycot import sb03md
-    except ImportError, e:
+    except ImportError:
         if use_scipy is False:
             raise ImportError("can't find slycot subroutine sb03md")
         else:
@@ -324,7 +327,8 @@ def controllability_truncation(A, B, C, k,
         res = sb03md(N, -np.dot(B, B.conj().transpose()), A, np.eye(N), 'C')
         P, scale, sep, ferr, w = res
         if scale < 1.:
-            raise NotImplementedError("Handling scale<1. is not yet implemented.")
+            e = "Handling scale<1. is not yet implemented."
+            raise NotImplementedError(e)
 
     Lambda, U = linalg.eigh(P, check_finite=False,
                             overwrite_a=False, overwrite_b=False)
@@ -344,10 +348,12 @@ def controllability_truncation(A, B, C, k,
 
     return k, A, B, C, s, Uk, UkH
 
+
 def isStable(A):
     """Check if all eigenvalues are in the left half of the complex plane"""
     D, V = linalg.eigh(A)
     return (D.real < 0).all()
+
 
 class lss(object):
     """linear time independent state space system.
@@ -365,12 +371,12 @@ class lss(object):
         State-Space matrices. If one of the matrices is None, it is
         replaced by a zero matrix with appropriate dimensions.
     reduction : {'truncation_square_root'}, optional
-        Choose method of reduction. If it isn't provided, matrices are 
+        Choose method of reduction. If it isn't provided, matrices are
         used without reduction.
     \*\*reduction_options : dict, optional
         The arguments with which the reduction method is called.
 
-    Attributes 
+    Attributes
     ----------
     x0 : array_like, optional
         Initial state. Defaults to the zero state.
@@ -391,12 +397,12 @@ class lss(object):
     integrator = 'dopri5'
     integrator_options = {}
     reduction_functions = {
-        'truncation_square_root' : truncation_square_root,
-        'controllability_truncation' : controllability_truncation,
-        'truncation_square_root_trans_matrix' : \
-            truncation_square_root_trans_matrix,
-        'truncation_square_root_schur' : truncation_square_root_schur,
-        'inoptimal_truncation_square_root' : inoptimal_truncation_square_root}
+        'truncation_square_root': truncation_square_root,
+        'controllability_truncation': controllability_truncation,
+        'truncation_square_root_trans_matrix':
+        truncation_square_root_trans_matrix,
+        'truncation_square_root_schur': truncation_square_root_schur,
+        'inoptimal_truncation_square_root': inoptimal_truncation_square_root}
 
     def __init__(self, *create_from, **reduction_options):
         """Initialize a linear state space system
@@ -494,7 +500,7 @@ class lss(object):
         return np.dot(self.A, y) + np.dot(self.B, u)
 
     def setupODE(self):
-        """Set the ode solver. All integrator, options and initial value can 
+        """Set the ode solver. All integrator, options and initial value can
         be set through class attributes.
 
         """
@@ -552,4 +558,3 @@ class lss(object):
         if t is not self.t:
             self.state.integrate(t)
         return self.x
-

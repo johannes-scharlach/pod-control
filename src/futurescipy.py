@@ -14,6 +14,7 @@ from numpy import zeros, atleast_2d
 
 __all__ = ["abcd_normalize"]
 
+
 def _none_to_empty_2d(arg):
     if arg is None:
         return zeros((0, 0))

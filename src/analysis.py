@@ -266,7 +266,7 @@ def optionPricingComparison(N=1000, k=None,
 
     axes = []
 
-    for system in range(4):
+    for system in range(6):
         axes.append(fig.add_subplot(221+system, projection='3d'))
 
         Z = []
@@ -276,7 +276,7 @@ def optionPricingComparison(N=1000, k=None,
         axes[-1].plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
                         linewidth=0, antialiased=False)
         axes[-1].set_title(systems[system]["name"], **font_options)
-        axes[-1].set_xlabel("-t", **font_options)
+        axes[-1].set_xlabel("t", **font_options)
         axes[-1].set_ylabel("K", **font_options)
         axes[-1].set_zlabel("Lambda(K)", **font_options)
 

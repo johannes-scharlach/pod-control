@@ -37,20 +37,10 @@ sys = unred_sys[0]["sys"]
 
 print("REDUCTIONS\n--------------")
 
-red_sys = [{"name": "auto truncated ab09ax",
-            "reduction": "truncation_square_root_trans_matrix"},
-           {"name": "balanced truncated ab09ax with k = {}".format(k),
-            "reduction": "truncation_square_root_trans_matrix",
-            "k": k},
-           {"name": "controllability gramian reduction with k={}".format(k),
-            "reduction": "controllability_truncation",
-            "k": k},
-           {"name": "controllability gramian reduction with k={}".format(k2),
-            "reduction": "controllability_truncation",
-            "k": k2},
-           {"name": "controllability gramian reduction with k={}".format(k3),
-            "reduction": "controllability_truncation",
-            "k": k3}]
+k_bal_trunc = [None, k]
+k_cont_trunc = [k3, k2, k]
+
+red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
 
 red_sys = reduce(unred_sys[0]["sys"], red_sys)
 

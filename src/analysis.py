@@ -81,37 +81,37 @@ def controllableHeatSystemComparison(N=1000, k=None, k2=None,
                       picture_destination=pic_path)
 
 
+def systemsToReduce(k_bal_trunc, k_cont_trunc):
+    red_sys = []
+
+    for k in k_bal_trunc:
+        if k:
+            with_k_str = "\nwith k = {}".format(k)
+        else:
+            with_k_str = ""
+        red_sys.append({"name": "balanced truncation" + with_k_str,
+                        "reduction": "truncation_square_root_trans_matrix",
+                        "k": k})
+
+    for k in k_cont_trunc:
+        with_k_str = "\nwith k = {}".format(k)
+        red_sys.append({"name": "controllability truncation" + with_k_str,
+                        "reduction": "controllability_truncation",
+                        "k": k})
+
+    return red_sys
+
+
 def reducedAnalysis2D(unred_sys, control, k=10, k2=None,
                       T0=0., T=1., L=1., number_of_steps=100,
                       picture_destination=
                       "../plots/plot_{}_t{:.2f}_azim_{}.png"):
     print("REDUCTIONS\n--------------")
 
-    red_sys = [{"name": "auto truncated ab09ax",
-                "reduction": "truncation_square_root_trans_matrix"},
-               {"name": "balanced truncated ab09ax\nwith k = {}".format(k),
-                "reduction": "truncation_square_root_trans_matrix",
-                "k": k}]
-#               {"name": "balanced truncated in Python with k = {}".format(k),
-#                    "reduction": "inoptimal_truncation_square_root",
-#                    "k": k},
-    if k2:
-        red_sys.append({"name": ("controllability gramian\n"
-                                 "reduction with k={}".format(k2)),
-                        "reduction": "controllability_truncation",
-                        "k": k2})
-    red_sys.append({"name": ("controllability gramian\n"
-                             "reduction with k={}".format(k)),
-                    "reduction": "controllability_truncation",
-                    "k": k})
+    k_bal_trunc = [None, k]
+    k_cont_trunc = [k2] * (k2 is not None) + [k]
 
-#    if sys.x0 is None:
-#        red_sys += [{"name" : "auto truncated ab09ad",
-#                        "reduction" : "truncation_square_root"},
-#                    {"name" : ("balanced truncated ab09ad\n"
-#                               "with k = {}".format(k)),
-#                        "reduction" : "truncation_square_root",
-#                        "k" : k}]
+    red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
 
     red_sys = reduce(unred_sys[0]["sys"], red_sys)
 
@@ -202,15 +202,10 @@ def optionPricingComparison(N=1000, k=None,
 
     print("REDUCTIONS\n--------------")
 
-    red_sys = [{"name": "auto truncated ab09ax",
-                "reduction": "truncation_square_root_trans_matrix"},
-               {"name": "balanced truncated ab09ax with k = {}".format(k),
-                "reduction": "truncation_square_root_trans_matrix",
-                "k": k},
-               {"name": ("controllability gramian reduction"
-                         " with k={}".format(k)),
-                "reduction": "controllability_truncation",
-                "k": k}]
+    k_bal_trunc = [None, k]
+    k_cont_trunc = + [k]
+
+    red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
 
     red_sys = reduce(unred_sys[0]["sys"], red_sys)
 
@@ -297,24 +292,10 @@ def reducedAnalysis1D(unred_sys, k=10, k2=28,
                       T0=0., T=1., number_of_steps=100):
     print("REDUCTIONS\n--------------")
 
-    red_sys = [{"name": "auto truncated ab09ax",
-                "reduction": "truncation_square_root_trans_matrix"},
-               # {"name": "auto truncated ab09ad",
-               #  "reduction": "truncation_square_root"},
-               {"name": ("controllability gramian reduction"
-                         " with k={}".format(k2)),
-                "reduction": "controllability_truncation",
-                "k": k2},
-               {"name": "balanced truncated ab09ax with k = {}".format(k),
-                "reduction": "truncation_square_root_trans_matrix",
-                "k": k},
-               # {"name": "balanced truncated ab09ad with k = {}".format(k),
-               #  "reduction": "truncation_square_root",
-               #  "k": k},
-               {"name": ("controllability gramian reduction"
-                         " with k={}".format(k)),
-                "reduction": "controllability_truncation",
-                "k": k}]
+    k_bal_trunc = [None, k]
+    k_cont_trunc = [k2] * (k2 is not None) + [k]
+
+    red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
 
     red_sys = reduce(unred_sys[0]["sys"], red_sys)
 

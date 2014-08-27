@@ -56,31 +56,6 @@ class Timer(object):
         return False
 
 
-def controllableHeatSystemComparison(N=1000, k=None, k2=None,
-                                     r=0.05, T0=0., T=1., L=1.,
-                                     number_of_steps=100,
-                                     control="sin",
-                                     integrator="dopri5",
-                                     integrator_options={}):
-    if k is None:
-        k = max(1, int(N/50))
-
-    print("SETUP\n====================")
-
-    unred_sys = [{"name": "Controllable heat equation"}]
-
-    print(unred_sys[0]["name"])
-    with Timer():
-        unred_sys[0]["sys"] = e2s.controllableHeatSystem(N=N, L=L,
-                                                         control=control)
-        unred_sys[0]["sys"].integrator = integrator
-        unred_sys[0]["sys"].integrator_options = integrator_options
-
-    pic_path = "../plots/controllable_heat_{}_t{:.2f}_azim_{}.png"
-    reducedAnalysis2D(unred_sys, control, k, k2, T0, T, L, number_of_steps,
-                      picture_destination=pic_path)
-
-
 def systemsToReduce(k_bal_trunc, k_cont_trunc):
     red_sys = []
 
@@ -178,6 +153,33 @@ def reducedAnalysis2D(unred_sys, control, k=10, k2=None,
             for ax in axes:
                 ax.azim = ii
             fig.savefig(picture_destination.format(control, T, axes[0].azim))
+
+    return systems
+
+
+def controllableHeatSystemComparison(N=1000, k=None, k2=None,
+                                     r=0.05, T0=0., T=1., L=1.,
+                                     number_of_steps=100,
+                                     control="sin",
+                                     integrator="dopri5",
+                                     integrator_options={}):
+    if k is None:
+        k = max(1, int(N/50))
+
+    print("SETUP\n====================")
+
+    unred_sys = [{"name": "Controllable heat equation"}]
+
+    print(unred_sys[0]["name"])
+    with Timer():
+        unred_sys[0]["sys"] = e2s.controllableHeatSystem(N=N, L=L,
+                                                         control=control)
+        unred_sys[0]["sys"].integrator = integrator
+        unred_sys[0]["sys"].integrator_options = integrator_options
+
+    pic_path = "../plots/controllable_heat_{}_t{:.2f}_azim_{}.png"
+    reducedAnalysis2D(unred_sys, control, k, k2, T0, T, L, number_of_steps,
+                      picture_destination=pic_path)
 
 
 def optionPricingComparison(N=1000, k=None,
@@ -347,6 +349,8 @@ def reducedAnalysis1D(unred_sys, k=10, k2=28,
         semilogy(range(len(sv)), sv,
                  marker=marker, label=system["name"])
     legend(loc="lower left")
+
+    return systems
 
 
 def loadHeat(k=10, k2=28, T0=0., T=1., number_of_steps=100,

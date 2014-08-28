@@ -3,6 +3,7 @@ import numpy as np
 from scipy import linalg
 from matplotlib.pyplot import plot, legend, figure, show, xlabel, ylabel
 from matplotlib import cm
+from mpl_toolkits.mplot3d import axes3d
 import example2sys as e2s
 from analysis import *
 

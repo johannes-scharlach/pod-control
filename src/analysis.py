@@ -65,12 +65,14 @@ def systemsToReduce(k_bal_trunc, k_cont_trunc):
         else:
             with_k_str = ""
         red_sys.append({"name": "balanced truncation" + with_k_str,
+                        "shortname": "BT",
                         "reduction": "truncation_square_root_trans_matrix",
                         "k": k})
 
     for k in k_cont_trunc:
         with_k_str = "\nwith k = {}".format(k)
         red_sys.append({"name": "controllability truncation" + with_k_str,
+                        "shortname": "CT",
                         "reduction": "controllability_truncation",
                         "k": k})
 
@@ -414,4 +416,58 @@ def reduce(sys, red_sys):
                         reduction=system.get("reduction", None),
                         k=system.get("k", None))
 
+        system["error_bound"] = system["sys"].hsv[0] * \
+            np.finfo(float).eps * sys.order
+
     return red_sys
+
+
+def tableFormat(systems, solving_time=False, hankel_norm=False, min_tol=False):
+    th = ("Reduction "
+          " &  Order"
+          " & \\specialcell[r]{Max. Error\\\\at $0\\leq t \\leq T$}"
+          " & \\specialcell[r]{Max. Error\\\\at $t=T$}")
+
+    tb_template = ("\\\\\\hline\n{:2s}"
+                   " & {:3d}"
+                   " & {:9.2e}"
+                   " & {:9.2e}")
+
+    if solving_time:
+        th += " & \\specialcell[r]{Solving Time}"
+        tb_template += " & {:9.2e}"
+
+    if hankel_norm:
+        th += " & Hankel Norm"
+        tb_template += " & {:9.2e}"
+
+    if min_tol:
+        th += " & Minimal Tolerance"
+        tb_template += " & {:9.2e}"
+
+    tb = []
+    for system in systems:
+        results = [
+            system.get("shortname", "Original"),
+            system["sys"].order
+            ]
+        if "eps" in system:
+            results.append(max(system["eps"]))
+            results.append(system["eps"][-1])
+
+        if solving_time:
+            results.append(0.)
+
+        if hankel_norm:
+            results.append(system["sys"].hsv[0])
+
+        if min_tol:
+            results.append(system["error_bound"])
+
+        tb.append(tb_template.format(*results))
+
+    table = th
+    for line in tb:
+        table += line
+
+    print(table)

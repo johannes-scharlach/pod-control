@@ -364,7 +364,8 @@ def loadHeat(k=10, k2=28, T0=0., T=1., number_of_steps=100,
     u = lambda t, x=None: np.array([e2s.simple_functions[control](omega*t) *
                                     control_scale])
 
-    unred_sys = [{"name": "Heat equation from\nthe SLICOT benchmarks"}]
+    unred_sys = [{"name": "Heat equation from\nthe SLICOT benchmarks",
+                  "shortname": "Heat eq"}]
 
     print(unred_sys[0]["name"])
     with Timer():
@@ -388,7 +389,9 @@ def compareHeat(k=10, k2=28, T0=0., T=10., number_of_steps=300,
                          False,
                          integrator, integrator_options)
 
-    reducedAnalysis1D(unred_sys, k, k2, T0, T, number_of_steps)
+    systems = reducedAnalysis1D(unred_sys, k, k2, T0, T, number_of_steps)
+
+    return systems
 
 
 def compareHeatStates(k=10, k2=37, T0=0., T=10., number_of_steps=300,
@@ -404,8 +407,11 @@ def compareHeatStates(k=10, k2=37, T0=0., T=10., number_of_steps=300,
 
     pic_path = "../plots/slicot_heat_{}_t{:.2f}_azim_{}.png"
 
-    reducedAnalysis2D(unred_sys, control, k, k2, T0, T, L, number_of_steps,
-                      picture_destination=pic_path)
+    systems = reducedAnalysis2D(unred_sys, control, k, k2, T0, T, L,
+                                number_of_steps,
+                                picture_destination=pic_path)
+
+    return systems
 
 
 def reduce(sys, red_sys):
@@ -424,27 +430,27 @@ def reduce(sys, red_sys):
 
 
 def tableFormat(systems, solving_time=False, hankel_norm=False, min_tol=False):
-    th = ("Reduction "
-          " &  Order"
+    th = ("Reduction"
+          " & Order"
           " & \\specialcell[r]{Max. Error\\\\at $0\\leq t \\leq T$}"
           " & \\specialcell[r]{Max. Error\\\\at $t=T$}")
 
-    tb_template = ("\\\\\\hline\n{:2s}"
-                   " & {:3d}"
-                   " & {:9.2e}"
-                   " & {:9.2e}")
+    tb_template = ("\\\\\\hline\n{:7s}"
+                   " & \\num{{{:3d}}}"
+                   " & \\num{{{:9.10e}}}"
+                   " & \\num{{{:9.10e}}}")
 
     if solving_time:
         th += " & \\specialcell[r]{Solving Time}"
-        tb_template += " & {:9.2e}"
+        tb_template += " & \\SI{{{:9.10e}}}{{\\second}}"
 
     if hankel_norm:
         th += " & Hankel Norm"
-        tb_template += " & {:9.2e}"
+        tb_template += " & \\num{{{:9.10e}}}"
 
     if min_tol:
         th += " & Minimal Tolerance"
-        tb_template += " & {:9.2e}"
+        tb_template += " & \\num{{{:9.10e}}}"
 
     tb = []
     for system in systems:
@@ -455,6 +461,9 @@ def tableFormat(systems, solving_time=False, hankel_norm=False, min_tol=False):
         if "eps" in system:
             results.append(max(system["eps"]))
             results.append(system["eps"][-1])
+        else:
+            results.append(0.)
+            results.append(0.)
 
         if solving_time:
             results.append(0.)
@@ -463,7 +472,10 @@ def tableFormat(systems, solving_time=False, hankel_norm=False, min_tol=False):
             results.append(system["sys"].hsv[0])
 
         if min_tol:
-            results.append(system["error_bound"])
+            try:
+                results.append(system["error_bound"])
+            except KeyError:
+                results.append(0.)
 
         tb.append(tb_template.format(*results))
 

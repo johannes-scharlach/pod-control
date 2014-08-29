@@ -80,6 +80,82 @@ def systemsToReduce(k_bal_trunc, k_cont_trunc):
     return red_sys
 
 
+def relativeErrors(Y, Yhat, min_error=0.):
+    diff = Y - Yhat
+    Y_above_min = np.where(abs(diff) <= min_error,
+                           math.copysign(np.inf, diff),
+                           math.copysign(Y, diff))
+
+    relativeErrors = diff / Y_above_min
+
+    return diff, relativeErrors
+
+
+def reducedAnalysis1D(unred_sys, k=10, k2=28,
+                      T0=0., T=1., number_of_steps=100):
+    print("REDUCTIONS\n--------------")
+
+    k_bal_trunc = [None, k]
+    k_cont_trunc = [k2] * (k2 is not None) + [k]
+
+    red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
+    red_sys = reduce(unred_sys[0]["sys"], red_sys)
+
+    print("===============\nEVALUATIONS\n===============")
+
+    timeSteps = list(np.linspace(T0, T, number_of_steps))
+    systems = unred_sys + red_sys
+
+    for system in systems:
+        print(system["name"])
+        with Timer():
+            system["Y"] = system["sys"](timeSteps)
+
+    print("===============\nERRORS\n===============")
+
+    norm_order = np.inf
+
+    Y = systems[0]["Y"]
+
+    for system in systems:
+        print(system["name"], "has order", system["sys"].order)
+        system["diff"], system["rel_eps"] = \
+            zip(*[relativeErrors(y, yhat, system.get("error_bound", 0.))
+                  for y, yhat in zip(Y, system["Y"])])
+        system["eps"] = [linalg.norm(diff, ord=norm_order)
+                         for diff in system["diff"]]
+        print("and a maximal error of {}".format(max(system["eps"])))
+        print("and an error at t=T of {}".format(system["eps"][-1]))
+
+    print("==============\nPLOTS\n==============")
+
+    figure(1)
+    for system in systems:
+        plot(timeSteps, system["Y"], label=system["name"])
+    legend(loc="lower right")
+
+    figure(2)
+    for system in systems[1:4]:
+        subplot(1, 2, 1)
+        plot(timeSteps, system["eps"], label=system["name"])
+    legend(loc="upper left")
+    for system in systems[4:]:
+        subplot(1, 2, 2)
+        plot(timeSteps, system["eps"], label=system["name"])
+    legend(loc="upper left")
+
+    markers = ['o', 'v', '*', 'x', 'd']
+
+    figure(3)
+    for system, marker in zip(systems[1:], markers):
+        sv = list(system["sys"].hsv)
+        semilogy(range(len(sv)), sv,
+                 marker=marker, label=system["name"])
+    legend(loc="lower left")
+
+    return systems
+
+
 def reducedAnalysis2D(unred_sys, control, k=10, k2=None,
                       T0=0., T=1., L=1., number_of_steps=100,
                       picture_destination=
@@ -293,69 +369,6 @@ def thermalRCNetworkComparison(R=1e90, C=1e87, n=100, k=10, k2=28, r=3,
     reducedAnalysis1D(unred_sys, k, k2, T0, T, number_of_steps)
 
 
-def reducedAnalysis1D(unred_sys, k=10, k2=28,
-                      T0=0., T=1., number_of_steps=100):
-    print("REDUCTIONS\n--------------")
-
-    k_bal_trunc = [None, k]
-    k_cont_trunc = [k2] * (k2 is not None) + [k]
-
-    red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
-
-    red_sys = reduce(unred_sys[0]["sys"], red_sys)
-
-    print("===============\nEVALUATIONS\n===============")
-
-    timeSteps = list(np.linspace(T0, T, number_of_steps))
-    systems = unred_sys + red_sys
-
-    for system in systems:
-        print(system["name"])
-        with Timer():
-            system["Y"] = system["sys"](timeSteps)
-
-    print("===============\nERRORS\n===============")
-
-    norm_order = np.inf
-
-    Y = systems[0]["Y"]
-
-    for system in systems:
-        print(system["name"], "has order", system["sys"].order)
-        system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
-                         for y, yhat in zip(Y, system["Y"])]
-        print("and a maximal error of {}".format(max(system["eps"])))
-        print("and an error at t=T of {}".format(system["eps"][-1]))
-
-    print("==============\nPLOTS\n==============")
-
-    figure(1)
-    for system in systems:
-        plot(timeSteps, system["Y"], label=system["name"])
-    legend(loc="lower right")
-
-    figure(2)
-    for system in systems[1:4]:
-        subplot(1, 2, 1)
-        plot(timeSteps, system["eps"], label=system["name"])
-    legend(loc="upper left")
-    for system in systems[4:]:
-        subplot(1, 2, 2)
-        plot(timeSteps, system["eps"], label=system["name"])
-    legend(loc="upper left")
-
-    markers = ['o', 'v', '*', 'x', 'd']
-
-    figure(3)
-    for system, marker in zip(systems[1:], markers):
-        sv = list(system["sys"].hsv)
-        semilogy(range(len(sv)), sv,
-                 marker=marker, label=system["name"])
-    legend(loc="lower left")
-
-    return systems
-
-
 def loadHeat(k=10, k2=28, T0=0., T=1., number_of_steps=100,
              control="sin", omega=math.pi, control_scale=1.,
              all_state_vars=False,
@@ -429,28 +442,41 @@ def reduce(sys, red_sys):
     return red_sys
 
 
-def tableFormat(systems, solving_time=False, hankel_norm=False, min_tol=False):
+def tableFormat(systems, eps=True, rel_eps=False, solving_time=False,
+                hankel_norm=False, min_tol=False):
     th = ("Reduction"
-          " & Order"
-          " & \\specialcell[r]{Max. Error\\\\at $0\\leq t \\leq T$}"
-          " & \\specialcell[r]{Max. Error\\\\at $t=T$}")
+          " & Order")
 
     tb_template = ("\\\\\\hline\n{:7s}"
-                   " & \\num{{{:3d}}}"
-                   " & \\num{{{:9.10e}}}"
-                   " & \\num{{{:9.10e}}}")
+                   " & \\num{{{:3d}}}")
+
+    if (eps + rel_eps) == 2:
+        th += (" & \\multicolumn{2}{r|}{\\specialcell[r]{Max. \\& Rel. Error"
+               "\\\\at $0\\leq t \\leq T$}}"
+               " & \\multicolumn{2}{r|}{\\specialcell[r]{Max. \\& Rel. Error"
+               "\\\\at $t=T$}}")
+        tb_template += (" & \\num{{{:15.10e}}} & \\num{{{:15.10e}}}"
+                        " & \\num{{{:15.10e}}} & \\num{{{:15.10e}}}")
+    elif eps:
+        th += (" & \\specialcell[r]{Max. Error\\\\at $0\\leq t \\leq T$}"
+               " & \\specialcell[r]{Max. Error\\\\at $t=T$}")
+        tb_template += " & \\num{{{:15.10e}}} & \\num{{{:15.10e}}}"
+    elif rel_eps:
+        th += (" & \\specialcell[r]{Rel. Error\\\\at $0\\leq t \\leq T$}"
+               " & \\specialcell[r]{Rel. Error\\\\at $t=T$}")
+        tb_template += " & \\num{{{:15.10e}}} & \\num{{{:15.10e}}}"
 
     if solving_time:
         th += " & \\specialcell[r]{Solving Time}"
-        tb_template += " & \\SI{{{:9.10e}}}{{\\second}}"
+        tb_template += " & \\SI{{{:15.10e}}}{{\\second}}"
 
     if hankel_norm:
         th += " & Hankel Norm"
-        tb_template += " & \\num{{{:9.10e}}}"
+        tb_template += " & \\num{{{:15.10e}}}"
 
     if min_tol:
         th += " & Minimal Tolerance"
-        tb_template += " & \\num{{{:9.10e}}}"
+        tb_template += " & \\num{{{:15.10e}}}"
 
     tb = []
     for system in systems:
@@ -458,12 +484,29 @@ def tableFormat(systems, solving_time=False, hankel_norm=False, min_tol=False):
             system.get("shortname", "Original"),
             system["sys"].order
             ]
-        if "eps" in system:
-            results.append(max(system["eps"]))
-            results.append(system["eps"][-1])
-        else:
-            results.append(0.)
-            results.append(0.)
+        if eps:
+            try:
+                results.append(max(system["eps"]))
+            except KeyError:
+                results.append(0.)
+
+        if rel_eps:
+            try:
+                results.append(max(max(system["rel_eps"])))
+            except KeyError:
+                results.append(0.)
+
+        if eps:
+            try:
+                results.append(system["eps"][-1])
+            except KeyError:
+                results.append(0.)
+
+        if rel_eps:
+            try:
+                results.append(max(system["rel_eps"][-1]))
+            except KeyError:
+                results.append(0.)
 
         if solving_time:
             results.append(0.)

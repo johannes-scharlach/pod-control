@@ -83,8 +83,8 @@ def systemsToReduce(k_bal_trunc, k_cont_trunc):
 def relativeErrors(Y, Yhat, min_error=0.):
     diff = Y - Yhat
     Y_above_min = np.where(abs(diff) <= min_error,
-                           math.copysign(np.inf, diff),
-                           math.copysign(Y, diff))
+                           np.copysign(np.inf, diff),
+                           np.copysign(Y, diff))
 
     relativeErrors = diff / Y_above_min
 
@@ -187,51 +187,60 @@ def reducedAnalysis2D(unred_sys, control, k=10, k2=None,
 
     for system in systems:
         print(system["name"], "has order", system["sys"].order)
-        system["eps"] = [linalg.norm(y-yhat, ord=norm_order)
-                         for y, yhat in zip(Y, system["Y"])]
+        system["diff"], system["rel_eps"] = \
+            zip(*[relativeErrors(y, yhat, system.get("error_bound", 0.))
+                  for y, yhat in zip(Y, system["Y"])])
+        system["eps"] = [linalg.norm(diff, ord=norm_order)
+                         for diff in system["diff"]]
         print("and a maximal error of {}".format(max(system["eps"])))
         print("and an error at t=T of {}".format(system["eps"][-1]))
 
     print("==============\nPLOTS\n==============")
 
-    figure(2)
-    for system in systems[1:]:
-        plot(timeSteps, system["eps"], label=system["name"])
-    legend(loc="upper left")
+    draw_figures = raw_input("Do you want to draw figures? (y/N) ")
 
-    fig = figure()
+    if draw_figures == "y":
+        figure(2)
+        for system in systems[1:]:
+            plot(timeSteps, system["eps"], label=system["name"])
+        legend(loc="upper left")
 
-    number_of_outputs = len(Y[0])
+        fig = figure()
 
-    X, Y = [], []
-    for i in range(len(timeSteps)):
-        X.append([timeSteps[i] for _ in range(number_of_outputs)])
-        Y.append([j*L/(number_of_outputs-1) for j in range(number_of_outputs)])
+        number_of_outputs = len(Y[0])
 
-    axes = []
-
-    for system in range(len(systems)):
-        axes.append(fig.add_subplot(221+system+10*(len(systems) > 4),
-                                    projection='3d'))
-
-        Z = []
+        X, Y = [], []
         for i in range(len(timeSteps)):
-            Z.append(list(systems[system]["Y"][i]))
+            X.append([timeSteps[i] for _ in range(number_of_outputs)])
+            Y.append([j*L/(number_of_outputs-1)
+                      for j in range(number_of_outputs)])
 
-        axes[-1].plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm,
-                              linewidth=0, antialiased=False)
-        axes[-1].set_title(systems[system]["name"])
-        axes[-1].set_xlabel("t")
-        axes[-1].set_ylabel("l")
-        axes[-1].set_zlabel("temperature")
+        axes = []
 
-    save_figures = raw_input("Do you want to save the figures? (y/N) ")
+        for system in range(len(systems)):
+            axes.append(fig.add_subplot(221+system+10*(len(systems) > 4),
+                                        projection='3d'))
 
-    if save_figures == "y":
-        for ii in xrange(360, 0, -10):
-            for ax in axes:
-                ax.azim = ii
-            fig.savefig(picture_destination.format(control, T, axes[0].azim))
+            Z = []
+            for i in range(len(timeSteps)):
+                Z.append(list(systems[system]["Y"][i]))
+
+            axes[-1].plot_surface(X, Y, Z, rstride=1, cstride=1,
+                                  cmap=cm.coolwarm,
+                                  linewidth=0, antialiased=False)
+            axes[-1].set_title(systems[system]["name"])
+            axes[-1].set_xlabel("t")
+            axes[-1].set_ylabel("l")
+            axes[-1].set_zlabel("temperature")
+
+        save_figures = raw_input("Do you want to save the figures? (y/N) ")
+
+        if save_figures == "y":
+            for ii in xrange(360, 0, -10):
+                for ax in axes:
+                    ax.azim = ii
+                fig.savefig(picture_destination.format(control, T,
+                                                       axes[0].azim))
 
     return systems
 
@@ -447,7 +456,7 @@ def tableFormat(systems, eps=True, rel_eps=False, solving_time=False,
     th = ("Reduction"
           " & Order")
 
-    tb_template = ("\\\\\\hline\n{:7s}"
+    tb_template = ("\\\\\midrule\n{:7s}"
                    " & \\num{{{:3d}}}")
 
     if (eps + rel_eps) == 2:
@@ -468,7 +477,7 @@ def tableFormat(systems, eps=True, rel_eps=False, solving_time=False,
 
     if solving_time:
         th += " & \\specialcell[r]{Solving Time}"
-        tb_template += " & \\SI{{{:15.10e}}}{{\\second}}"
+        tb_template += " & \\SI{{{:8.3e}}}{{\\second}}"
 
     if hankel_norm:
         th += " & Hankel Norm"
@@ -492,7 +501,7 @@ def tableFormat(systems, eps=True, rel_eps=False, solving_time=False,
 
         if rel_eps:
             try:
-                results.append(max(max(system["rel_eps"])))
+                results.append(max(map(max, system["rel_eps"])))
             except KeyError:
                 results.append(0.)
 

@@ -235,6 +235,17 @@ def truncation_square_root_schur(A, B, C,
 
 
 def inoptimal_truncation_square_root(A, B, C, k, check_stability=False):
+    """Use scipy to perform balanced truncation
+
+    Use scipy to perform balanced truncation on a linear state-space system.
+    This method is the natural application of scipy and inoptimal performance
+    wise compared to `truncation_square_root_trans_matrix`
+
+    Notes
+    -----
+    see truncation_square_root_trans_matrix
+
+    """
     if check_stability and not isStable(A):
         raise ValueError("This doesn't seem to be a stable system!")
     AH = A.transpose().conj()
@@ -555,6 +566,7 @@ class lss(object):
         return results if return_list else results[0]
 
     def solve(self, t):
+        """Solve the ODE system"""
         if t is not self.t:
             self.state.integrate(t)
         return self.x

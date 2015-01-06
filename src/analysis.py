@@ -13,51 +13,7 @@ import time
 font_options = {}
 
 
-def plotResults(Y, T, label=None, legend_loc='upper left', show_legend=False):
-    timeSteps = range(1, T+1)
-    plot(timeSteps, Y, label=label)
-    if show_legend:
-        legend(loc=legend_loc)
-
-
-def randomRuns(sys, rsys, T, sigma=10.0, integrator='dopri5'):
-    timeSteps = range(1, T+1)
-    U = [np.array([random.gauss(0., sigma)]) for t in timeSteps]
-
-    sys.integrator = integrator
-    rsys.integrator = integrator
-
-    sys.setupODE()
-    rsys.setupODE()
-
-    print('System of order {}'.format(sys.order))
-    with Timer():
-        Y = []
-        for t, u in zip(timeSteps, U):
-            Y.append(sys(t, u))
-    print('System of order {}'.format(rsys.order))
-    with Timer():
-        Yhat = []
-        for t, u in zip(timeSteps, U):
-            Yhat.append(sys(t, u))
-
-    return Y, Yhat, U
-
-
-class Timer(object):
-    """Allows some basic profiling"""
-    def __enter__(self):
-        self.start = time.time()
-        return self
-
-    def __exit__(self, ty, val, tb):
-        end = time.time()
-        self.elapsed = end - self.start
-        print('Time elapsed {} seconds'.format(self.elapsed))
-        return False
-
-
-def systemsToReduce(k_bal_trunc, k_cont_trunc):
+def _systemsToReduce(k_bal_trunc, k_cont_trunc):
     red_sys = []
 
     for k in k_bal_trunc:
@@ -80,15 +36,15 @@ def systemsToReduce(k_bal_trunc, k_cont_trunc):
     return red_sys
 
 
-def relativeErrors(Y, Yhat, min_error=0.):
+def _relativeErrors(Y, Yhat, min_error=0.):
     diff = Y - Yhat
     Y_above_min = np.where(abs(diff) <= min_error,
                            np.copysign(np.inf, diff),
                            np.copysign(Y, diff))
 
-    relativeErrors = diff / Y_above_min
+    err = diff / Y_above_min
 
-    return diff, relativeErrors
+    return diff, err
 
 
 def reducedAnalysis1D(unred_sys, k=10, k2=28,
@@ -98,7 +54,7 @@ def reducedAnalysis1D(unred_sys, k=10, k2=28,
     k_bal_trunc = [None, k]
     k_cont_trunc = [k2] * (k2 is not None) + [k]
 
-    red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
+    red_sys = _systemsToReduce(k_bal_trunc, k_cont_trunc)
     red_sys = reduce(unred_sys[0]["sys"], red_sys)
 
     print("===============\nEVALUATIONS\n===============")
@@ -120,7 +76,7 @@ def reducedAnalysis1D(unred_sys, k=10, k2=28,
     for system in systems:
         print(system["name"], "has order", system["sys"].order)
         system["diff"], system["rel_eps"] = \
-            zip(*[relativeErrors(y, yhat, system.get("error_bound", 0.))
+            zip(*[_relativeErrors(y, yhat, system.get("error_bound", 0.))
                   for y, yhat in zip(Y, system["Y"])])
         system["eps"] = [linalg.norm(diff, ord=norm_order)
                          for diff in system["diff"]]
@@ -165,7 +121,7 @@ def reducedAnalysis2D(unred_sys, control, k=10, k2=None,
     k_bal_trunc = [None, k]
     k_cont_trunc = [k2] * (k2 is not None) + [k]
 
-    red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
+    red_sys = _systemsToReduce(k_bal_trunc, k_cont_trunc)
 
     red_sys = reduce(unred_sys[0]["sys"], red_sys)
 
@@ -188,7 +144,7 @@ def reducedAnalysis2D(unred_sys, control, k=10, k2=None,
     for system in systems:
         print(system["name"], "has order", system["sys"].order)
         system["diff"], system["rel_eps"] = \
-            zip(*[relativeErrors(y, yhat, system.get("error_bound", 0.))
+            zip(*[_relativeErrors(y, yhat, system.get("error_bound", 0.))
                   for y, yhat in zip(Y, system["Y"])])
         system["eps"] = [linalg.norm(diff, ord=norm_order)
                          for diff in system["diff"]]
@@ -295,7 +251,7 @@ def optionPricingComparison(N=1000, k=None,
     k_bal_trunc = [None, k]
     k_cont_trunc = [k]
 
-    red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
+    red_sys = _systemsToReduce(k_bal_trunc, k_cont_trunc)
 
     red_sys = reduce(unred_sys[0]["sys"], red_sys)
 

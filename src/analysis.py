@@ -293,7 +293,7 @@ def optionPricingComparison(N=1000, k=None,
     print("REDUCTIONS\n--------------")
 
     k_bal_trunc = [None, k]
-    k_cont_trunc = + [k]
+    k_cont_trunc = [k]
 
     red_sys = systemsToReduce(k_bal_trunc, k_cont_trunc)
 

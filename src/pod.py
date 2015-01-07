@@ -166,9 +166,9 @@ def truncation_square_root_trans_matrix(A, B, C,
         If the slycot subroutine `ab09ad` can't be found. Occurs if the
         slycot package is not installed.
 
-    Notes
+    See also
     -----
-    see truncation_square_root
+    truncation_square_root
     """
     if check_stability and not isStable(A):
         raise ValueError("This doesn't seem to be a stable system!")
@@ -200,9 +200,9 @@ def truncation_square_root_schur(A, B, C,
                                  length_cache_array=None):
     """Use balanced truncation on a system with A in real Schur form
 
-    Notes
+    See also
     -----
-    see truncation_square_root_trans_matrix
+    truncation_square_root_trans_matrix
 
     """
     try:
@@ -241,9 +241,9 @@ def inoptimal_truncation_square_root(A, B, C, k, check_stability=False):
     This method is the natural application of scipy and inoptimal performance
     wise compared to `truncation_square_root_trans_matrix`
 
-    Notes
+    See also
     -----
-    see truncation_square_root_trans_matrix
+    truncation_square_root_trans_matrix
 
     """
     if check_stability and not isStable(A):

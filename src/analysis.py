@@ -1,3 +1,14 @@
+"""Analyze how well a system can be reduced by POD methods.
+
+Evaluate pod.py and how well it fits a particular problem. This file contains
+helper functions to compare reductions, create plots and creat TeX tables.
+
+Notes
+-----
+This file should also take care of profiling in the future.
+
+"""
+
 from __future__ import division, print_function
 import random
 import math

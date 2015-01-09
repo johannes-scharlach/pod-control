@@ -1,4 +1,7 @@
-"""Model order reduction for linear state space systems can be done with
+"""This module lets you apply Proper Orthogonal Decomposition (POD) methods
+on linear state space systems and reduce their order.
+
+Model order reduction for linear state space systems can be done with
 Proper Orthogonal Decomposition (POD) methods. Some of them can be simply
 applied when creating a system.
 

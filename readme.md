@@ -8,5 +8,6 @@ Written as part of the Bachelor Thesis "Model Reduction for Dynamical Systems by
 
 Dependencies
 ============
-scipy v0.14.x
-Slycot johannes-scharlach/Slycot
+
+- scipy v0.14.x
+- Slycot johannes-scharlach/Slycot
